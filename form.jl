@@ -47,44 +47,55 @@ function split_form(form::Tuple{Int, Int}, parts::Int)::Tuple{Vararg{Tuple{Int, 
 end
 
 """A recursive algorithm for computing forms to a given depth"""
-function compute_form_step(form::Tuple{Int, Int}, depth::Int, split::Int)
-    println(form)
-    println(depth)
-    println(split)
-    println("\n")
+function compute_form_step(form::Tuple{Int, Int}, depth::Int, split::Int)::Tuple{Vector{Tuple{Tuple{Int, Int}, Tuple{Int, Int}}}, Vector{Tuple{Int, Int}}}
+    # a temporary looping variable
+    new_forms = Vector{Tuple{Int, Int}}()
+
+    # holds the forms that are known to fall
+    fallen_forms = Vector{Tuple{Tuple{Int, Int}, Tuple{Int, Int}}}()
+
+    parity_result = compute_form(form[1], form[2])
     if depth <= 0
         # if the depth is 0 then stop computing.
         # return an empty fallen_forms and the given form
-        return ([], [form])
-    end
-    # a temporary looping variable
-    new_forms = []
-
-    # holds the forms that are known to fall
-    fallen_forms = []
-
-    result = compute_form(form[1], form[2])
-    println(result)
-    println([(form, result[2])])
-    if result[1]
+        push!(new_forms, form)
+    elseif parity_result[1]
         # if the result falls then add the form and fall point to the fallen_forms
-        fallen_forms += [(form, result[2])]
+        push!(fallen_forms, (form, parity_result[2]))
     else
         # otherwise the forms parity becomes unknown so split the form
-        split_result = split_form(result[2], split)
-
+        # TODO: splitting the result of the parity calculation (parity_result[2]) would mean we are now considering a transformation on
+        # our origonal form. This leads to double ups of fallen_forms like 2, 0 and 4, 2 or 4, 0 both of which are sub-forms.
+        # it would be worth considering the implications of splitting various forms.
+        split_result = split_form(form, split)
         # for all parts of the split perform compute_form_step on them and record the results.
         for i in split_result
-            println(i)
-            println()
             result = compute_form_step(i, depth-1, split)
             # add the fallen forms and new forms to our arrays.
-            fallen_forms += result[1]
-            new_forms += result[2]
+            append!(fallen_forms, result[1])
+            append!(new_forms, result[2])
         end
     end
-
     return (fallen_forms, new_forms)
 end
 
-compute_form_step((1, 0), 4, 2)
+println(compute_form_step((1, 0), 10, 2)[1])
+
+
+((2, 0), (1, 0)),
+((4, 1), (3, 1)),
+((16, 3), (9, 2)),
+((32, 11), (27, 10)),
+((32, 23), (27, 20)),
+
+((128, 7), (81, 5)),
+((128, 15), (81, 10)),
+((128, 59), (81, 38)),
+
+((256, 39), (243, 38)),
+((256, 79), (243, 76)),
+((256, 95), (243, 91)),
+((256, 123), (243, 118)),
+((256, 175), (243, 167)),
+((256, 199), (243, 190)),
+((256, 219), (243, 209))
