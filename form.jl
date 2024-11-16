@@ -48,9 +48,7 @@ function split_form(form::Tuple{UInt, UInt}, parts::Uint)::Tuple{Vararg{Tuple{UI
 end
 
 """A recursive algorithm for computing forms to a given depth"""
-function compute_form_step(form::Tuple{UInt, UInt}, depth::UInt, split::UInt)::Tuple{Vararg{Tuple{Vararg{Tuple{UInt, UInt}}}, 2}}
-    forms = [form]
-
+function compute_form_step(form::Tuple{UInt, UInt}, depth::UInt, split::UInt)::Tuple{Array{Vararg{Tuple{Tuple{UInt, UInt}, Tuple{UInt, UInt}}}}, Array{}}
     # a temporary looping variable
     new_forms = []
 
@@ -64,12 +62,13 @@ function compute_form_step(form::Tuple{UInt, UInt}, depth::UInt, split::UInt)::T
     else
         # otherwise the forms parity becomes unknown so split the form
         split = split_form(result[2], split)
-        results = []
         for i in split
-            results += [compute_form_step(i, depth-1, split)]
+            result = compute_form_step(i, depth-1, split)
+            # add the fallen forms to our array.
+            fallen_forms += result[0]
         end
     end
 
-    return (new_forms, exclude_forms)
+    return (fallen_forms, new_forms)
 end
 
