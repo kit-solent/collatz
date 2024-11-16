@@ -1,11 +1,11 @@
 # calculates general numbers e.g. numbers of the form an + b
 
 # TODO: We are not using nemo as the numbers should never get that big but if they do then
-# switch to ZZRingElem in place of UInt
+# switch to ZZRingElem in place of Int
 
 """Computes the given form: `a`n + `b`. Returns true if the form falls and the form at which it has fallen.
 Returns false if its parity becomes unknown and the point at which that happens."""
-function compute_form(a::UInt, b::UInt)::Tuple{Bool, Tuple{UInt, UInt}}
+function compute_form(a::Int, b::Int)::Tuple{Bool, Tuple{Int, Int}}
     # copy the initial values for reference.
     x, y = a, b
     while true
@@ -42,33 +42,49 @@ function compute_form(a::UInt, b::UInt)::Tuple{Bool, Tuple{UInt, UInt}}
     end
 end
 
-
-function split_form(form::Tuple{UInt, UInt}, parts::Uint)::Tuple{Vararg{Tuple{UInt, UInt}}}
+function split_form(form::Tuple{Int, Int}, parts::Int)::Tuple{Vararg{Tuple{Int, Int}}}
     ntuple(i -> begin (form[1]*parts, form[2] + form[1]*(i-1)) end, parts)
 end
 
 """A recursive algorithm for computing forms to a given depth"""
-function compute_form_step(form::Tuple{UInt, UInt}, depth::UInt, split::UInt)::Tuple{Array{Vararg{Tuple{Tuple{UInt, UInt}, Tuple{UInt, UInt}}}}, Array{}}
+function compute_form_step(form::Tuple{Int, Int}, depth::Int, split::Int)
+    println(form)
+    println(depth)
+    println(split)
+    println("\n")
+    if depth <= 0
+        # if the depth is 0 then stop computing.
+        # return an empty fallen_forms and the given form
+        return ([], [form])
+    end
     # a temporary looping variable
     new_forms = []
 
     # holds the forms that are known to fall
     fallen_forms = []
 
-    result = calculate_form(form[1], form[2])
+    result = compute_form(form[1], form[2])
+    println(result)
+    println([(form, result[2])])
     if result[1]
         # if the result falls then add the form and fall point to the fallen_forms
         fallen_forms += [(form, result[2])]
     else
         # otherwise the forms parity becomes unknown so split the form
-        split = split_form(result[2], split)
-        for i in split
+        split_result = split_form(result[2], split)
+
+        # for all parts of the split perform compute_form_step on them and record the results.
+        for i in split_result
+            println(i)
+            println()
             result = compute_form_step(i, depth-1, split)
-            # add the fallen forms to our array.
-            fallen_forms += result[0]
+            # add the fallen forms and new forms to our arrays.
+            fallen_forms += result[1]
+            new_forms += result[2]
         end
     end
 
     return (fallen_forms, new_forms)
 end
 
+compute_form_step((1, 0), 4, 2)
