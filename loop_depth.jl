@@ -1,4 +1,4 @@
-using Nemo, Base.Threads
+using Base.Threads
 
 # Returns the nth linear equation.
 # This is done by converting n into
