@@ -215,17 +215,6 @@ function test_range(range::StepRange{ZZRingElem})::Nothing
     end
 end
 
-"""run `test` on all numbers except every 4th number in the given range."""
-function test_range_skip_4(range::StepRange{ZZRingElem})::Nothing
-    for (index,number) in enumerate(range)
-        if index % 4 == 0
-            continue # skip every 4th number
-        end
-        test(number) # TODO: Exclude every 4th here
-    end
-end
-
-
 function test_range_unrolled_256(range::StepRange{ZZRingElem})::Nothing
     # here range is expected to be every 256th valid search number.
     for number in range
@@ -235,7 +224,6 @@ function test_range_unrolled_256(range::StepRange{ZZRingElem})::Nothing
     end
 end
 
-
 """Tests the given chunk using the @threads macro and test_range."""
 function test_chunk(chunk::StepRange{ZZRingElem})::Nothing
     # create ranges from the chunk
@@ -243,7 +231,7 @@ function test_chunk(chunk::StepRange{ZZRingElem})::Nothing
 
     # then test the ranges
     @threads for i in ranges
-        test_range_skip_4(i)
+        test_range(i)
     end
 end
 

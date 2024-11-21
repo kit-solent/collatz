@@ -98,7 +98,8 @@ end
 
 #println(compute_form_step((1, 0), 10, 2)[1])
 
-for a in 1:20
+# Some strange patterns here. Every 3rd doubling seems to add no exlusions.
+for a in 1:30
     y = Vector()
     for i in 0:2^a
         t = compute_form(2^a, i)
