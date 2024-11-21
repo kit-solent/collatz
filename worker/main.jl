@@ -226,8 +226,13 @@ function test_range_skip_4(range::StepRange{ZZRingElem})::Nothing
 end
 
 
-function test_range_unrolled(range::StepRange{ZZRingElem})::Nothing
-    # here range is expected to be valid search numbers.
+function test_range_unrolled_256(range::StepRange{ZZRingElem})::Nothing
+    # here range is expected to be every 256th valid search number.
+    for number in range
+        for i in (27, 31, 47, 63, 71, 91, 103, 111, 127, 155, 159, 167, 191, 207, 223, 231, 239, 251, 255)
+            test(number + 4 * i)
+        end
+    end
 end
 
 

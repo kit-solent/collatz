@@ -42,6 +42,23 @@ function compute_form(a::Int, b::Int)::Tuple{Bool, Tuple{Int, Int}}
     end
 end
 
+function precompute_form(a::Int, b::Int)::Tuple{Int, Int}
+    while true
+        if iseven(a)
+            if iseven(b)
+                a ÷= 2
+                b ÷= 2
+            else
+                a = 3*(a ÷ 2)
+                b = (3*b + 1) ÷ 2
+            end
+        else
+            return (a, b)
+        end
+    end
+end
+
+
 function split_form(form::Tuple{Int, Int}, parts::Int)::Tuple{Vararg{Tuple{Int, Int}}}
     ntuple(i -> begin (form[1]*parts, form[2] + form[1]*(i-1)) end, parts)
 end
@@ -81,11 +98,18 @@ end
 
 #println(compute_form_step((1, 0), 10, 2)[1])
 
-# TODO: Confirm that the output of this is saying what I think it is.
-# that almost every number of the form 256n + k from k=0 to 255
-for i in 0:255
-    println(string(i)*"   "*string(compute_form(256, i)))
+for a in 1:20
+    y = Vector()
+    for i in 0:2^a
+        t = compute_form(2^a, i)
+        if !t[1]
+            push!(y, t)
+        end
+    end
+    print(string(2^a)*"    "*string(length(y))*"                 ")
+    println(length(y)/2^a)
 end
+
 
 # ((2, 0), (1, 0)),
 # ((4, 1), (3, 1)),
