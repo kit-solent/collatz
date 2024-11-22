@@ -53,7 +53,7 @@ using Nemo, Base.Threads
 # CHUNK_SIZE is the size of the data ranges that will be computed one
 # at a time. If the program is terminated the progress will fall back
 # on the last completed chunk.
-const CHUNK_SIZE::ZZRingElem = ZZ(10)^3
+const CHUNK_SIZE::ZZRingElem = ZZ(10)^5
 
 # this is the number of cases that will be computed in a given pass of test_range
 # used to allow exclusion of ranges based on the computations of form.jl
@@ -63,14 +63,14 @@ const RANGE_UNROLL_COUNT::ZZRingElem = ZZ(256)
 const VALID_FILE_REGEX::Regex = r"^[0-9]+(,[0-9]+){2,3}$"
 
 # The number of threads available to this program.
-const THREAD_COUNT::Int = Threads.nthreads()
+const THREAD_COUNT::ZZRingElem = ZZ(Threads.nthreads())
 
 """Runs various setup tasks, loads `data_file`, and returns the `current` value and a `Tuple` of chunks to test."""
-function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{StepRange{ZZRingElem}}}}
+function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{ZZRingElemUnitRange}}}
     # Tell Julia to treat SIGINT (user interrupt: "ctrl + c") as a normal exception.
     # This allows it to be handled and for the program to exit gracfully, saving progress.
     Base.exit_on_sigint(false)
-    println("..")
+
     # warn the user if they are using less threads than are avalable.
     if Threads.nthreads() < Sys.CPU_THREADS
         print("WARNING: currently using: $(Threads.nthreads()) threads when: $(Sys.CPU_THREADS) are avalable. ")
@@ -79,18 +79,18 @@ function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{StepRange{ZZRin
         printstyled("set JULIA_NUM_THREADS=8", color = :red)
         print("\" to run julia.exe on 8 threds.\n")
     end
-    println("..")
+
     goal, current = load(data_file)
-    println("..")
+
     # this is the range of numbers that we need to test
-    range = current:goal
-    println("..")
+    rng = current:goal
+
     # this expands the edges of the range so that
-    range = ((first(range)+1) ÷ RANGE_UNROLL_COUNT):((last(range) + RANGE_UNROLL_COUNT-1) ÷ RANGE_UNROLL_COUNT)
-    println(range)
+    rng2 = ((first(rng)+1) ÷ RANGE_UNROLL_COUNT):((last(rng) + RANGE_UNROLL_COUNT-1) ÷ RANGE_UNROLL_COUNT)
+
     # split the ranges
-    ranges = split_range_by_size(range, CHUNK_SIZE)
-    println("..")
+    ranges = split_range_by_size(rng2, CHUNK_SIZE)
+
     return (current, ranges)
 end
 
@@ -226,8 +226,7 @@ function test_chunk(chunk::ZZRingElemUnitRange)::Nothing
     ranges = split_range_by_count(chunk, THREAD_COUNT)
 
     # then test the ranges
-    #@threads
-    for i in ranges
+    @threads for i in ranges
         test_range_unrolled_256(i)
     end
 end
@@ -239,30 +238,35 @@ function main()
     println("Starting computation...")
     try
         for i in chunks
+            #println(i)
             # TODO: test_chunk generates the ranges in-loop. Try pre-generation.
             test_chunk(i)
 
             # after the chunk has been tested update our
             # current progress to the last tested value.
             # this value has already been verified.
-            global current = last(i)
+            current = last(i)
 
             #     vvvvvvvvvvvv This clears the previous line and moves the cursor back to overwrite with the new number.
-            print("\e[2K\e[1G"*string(current))
+            print("\e[2K\e[1G" * string(current * RANGE_UNROLL_COUNT))
         end
         println("Computations finished. Please report `data` back to the centeral database.")
     catch err
         if isa(err, InterruptException)
             println("\nUser interrupt detected. Saving progress and quitting...")
         else
-            println("\nError: $err was thrown. Saving progress and re-throwing...")
-            save("data", current)
+            println("\nError: $err was thrown. \n\nSaving progress and re-throwing...")
+            save("data", current * RANGE_UNROLL_COUNT)
             throw(err)
         end
     end
-    save("data", current)
+    save("data", current * RANGE_UNROLL_COUNT)
 end
 
-println("hello")
-# main()
+
+main()
+
+#using BenchmarkTools
+#@btime test_chunk()
+
 # TODO: How to reliably interrupt the program?? SIGINT is not particularily reliable :(
