@@ -42,18 +42,23 @@ function compute_form(a::Int, b::Int)::Tuple{Bool, Tuple{Int, Int}}
     end
 end
 
-function precompute_form(a::Int, b::Int)::Tuple{Int, Int}
+function precompute_form(a::Int, b::Int)::Tuple{Int, Int, Int, Vector}
+    i=0
+    steps = Vector()
     while true
         if iseven(a)
             if iseven(b)
                 a ÷= 2
                 b ÷= 2
+                push!(steps, 0)
             else
                 a = 3*(a ÷ 2)
                 b = (3*b + 1) ÷ 2
+                push!(steps, 1)
             end
+            i+=1
         else
-            return (a, b)
+            return (a, b, i, steps)
         end
     end
 end
@@ -98,18 +103,26 @@ end
 
 #println(compute_form_step((1, 0), 10, 2)[1])
 
-# Some strange patterns here. Every 3rd doubling seems to add no exlusions.
-for a in 1:30
-    y = Vector()
-    for i in 0:2^a
-        t = compute_form(2^a, i)
-        if !t[1]
-            push!(y, t)
-        end
+
+for i in 0:256
+    t = compute_form(256, i)
+    if !t[1]
+        println(string(i)*"      "*string(t)*"        "*string(precompute_form(256, i)[3]) *"\t\t\t"*string(precompute_form(256, i)[4]))
     end
-    print(string(2^a)*"    "*string(length(y))*"                 ")
-    println(length(y)/2^a)
 end
+
+# # Some strange patterns here. Every 3rd doubling seems to add no exlusions.
+# for a in 1:20
+#     y = Vector()
+#     for i in 0:2^a-1
+#         t = compute_form(2^a, i)
+#         if !t[1]
+#             push!(y, t)
+#         end
+#     end
+#     print(string(2^a)*"    "*string(length(y))*"                 ")
+#     println(length(y)/2^a)
+# end
 
 
 # ((2, 0), (1, 0)),

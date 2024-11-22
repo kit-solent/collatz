@@ -40,9 +40,6 @@
 # below it's starting value then we have found another lower counterexample so the first could not have been the lowest.
 # this is because if n is a counterexample then EVERY number in it's sequence also must be a counterexample coz common sense.
 
-# terminology:
-# chunk: A range of numbers consisting of start and end points that covers every single integer in the range.
-# range: A range of numbers that only covers certain values within that range. This is used to split chunks amounst threads or to exclude fallen ranges.
 
 # TODO: Benchmark out-of-loop precomputation of the first two 1.5n+1 steps and passing in both values vs computing in function.
 
@@ -54,16 +51,14 @@
 """Functions to create, steralise, load, save and compute various test ranges."""
 module Tools
 
-export setup, test_range_unrolled_256, save
+export setup, test_chunk, save
 
 using Nemo, Base.Threads
 
 # CHUNK_SIZE is the size of the data ranges that will be computed one
 # at a time. If the program is terminated the progress will fall back
 # on the last completed chunk.
-const CHUNK_SIZE::ZZRingElem = ZZ(10)^3
-
-const CHUNKS_PER_STEP::ZZRingElem = ZZ(8)
+const CHUNK_SIZE::ZZRingElem = ZZ(10)^7
 
 # this is the number of cases that will be computed in a given pass of test_range
 # used to allow exclusion of ranges based on the computations of form.jl
@@ -93,12 +88,9 @@ function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{StepRange{ZZRin
     goal, current = load(data_file)
 
     # the current value has already been computed so go to the next one.
-    range = steralise_range_256(zz_range(current+1:goal))
+    chunks = generate_chunks(zz_range(current+1 : goal))
 
-    # split the range into pieces of size CHUNK_SIZE
-    ranges = split_range_by_size(range, CHUNK_SIZE * RANGE_UNROLL_COUNT)
-
-    return (current, ranges)
+    return (current, chunks)
 end
 
 """Loads the data from `filename` and returns the values of: `goal`, and `current` in a Tuple.
@@ -147,6 +139,7 @@ end
 """If `number` is the lowest counterexample to the Collatz Conjecture block forever. Otherwise return `nothing`."""
 @inline function test(number::ZZRingElem)::Nothing
     init_number::ZZRingElem = number
+    number = ((3*((3*number + 1) >> 1) + 1) >> 1) # TODO: expand and simpify.
     while number<init_number
         number = is_even(number) ? (number >> 1) : ((3*number + 1) >> 1)
     end
@@ -157,72 +150,75 @@ function zz_range(r::Union{StepRange, UnitRange, ZZRingElemUnitRange})::StepRang
     return ZZ(first(r)):ZZ(step(r)):ZZ(last(r))
 end
 
-"""Steralise the range so that the increment is 256 and both the start and end points are multiples of 256. The endpoints
-will be moved outwards."""
-@inline function steralise_range_256(range::StepRange{ZZRingElem})::StepRange{ZZRingElem}
-    # floor division and multiplication for rounding.
-    (first(range) ÷ 256) * 256 : ZZ(256) : ((last(range) + 255) ÷ 256) * 256
+# neither `split_range` or `split_range_8` need to account for the various edge cases such as
+# 0 width ranges or other strange inputs as all inputs come steralised from other functions.
+
+"""Split range `r` into `n` parts in round-robin fashion and return the parts in a `Tuple`."""
+@inline function split_range(r::StepRange{ZZRingElem}, n::Integer)::Tuple{Vararg{StepRange{ZZRingElem}}}
+    first_r = first(r)
+    step_r  = step(r)
+
+    # this is the number of steps that r will take to finish i.e. the number of iterations that would occour when looping over it.
+    steps_taken = (last(r)-first_r)/step(r) + 1 # because both ends inclusive
+
+    # some values that don't change accross loop iterations and so are precomputed here:
+    new_step = 8 * step_r
+    base_steps = steps_taken ÷ 8 -1
+    #            ^^^^^^^^^^^^^^^ already floored due to integer division.
+    steps_taken_mod_n = steps_taken % 8
+
+    parts = ntuple(i -> begin
+        # This block is the function used to evaluate the items of the NTuple. `i` is an argument reperesenting the index starting at 1.
+        new_start= first_r + (i - 1)*step_r
+        new_stop = new_start + new_step * (base_steps + (steps_taken_mod_n > (i - 1) ? 1 : 0))
+        new_start:new_step:new_stop
+    end, n)
+
+    return parts
+end
+
+"""Generate and return `threads` number of valid search ranges that ensure that `range` is fully covered."""
+@inline function generate_ranges(range::StepRange{ZZRingElem}, threads::Int)::Tuple{Vararg{StepRange{ZZRingElem}}}
+    # formula to find closest number of form 4n + 3: 3, 7, 11, 15, 19, 23, 27
+    # n-(n-3)%4 is rounded down
+    # n+(3-n%4)%4 is rounded up
+    # ensure that all numbers in range are of the form 4n + 3 by setting the step to 4 and moving the ends inwards.
+    r_first = first(range)
+    r_last  = last(range)
+    range = r_first+(3-r_first%4)%4 : ZZ(4) : r_last-(r_last-3)%4
+
+    # distribute the numbers accorss the provided threads ans return.
+    split_range(range, threads)
 end
 
 """Splits the given range into chunks of size `chunk_size`."""
-@inline function split_range_by_size(range::StepRange{ZZRingElem}, chunk_size::ZZRingElem)::Tuple{Vararg{StepRange{ZZRingElem}}}
+@inline function generate_chunks(range::StepRange{ZZRingElem}, chunk_size::ZZRingElem = CHUNK_SIZE)::Tuple{Vararg{StepRange{ZZRingElem}}}
     # return the ntuple
     ntuple(
         # This is the calculation for the ith item.
         i -> begin
+            # see split_range for an explination of this syntax.
             start_index = first(range) + (i-1)*chunk_size*step(range)
             end_index = min(start_index + (chunk_size - 1)*step(range), last(range))
             start_index:step(range):end_index
         end,
 
         # This is how many items are in the Tuple.
-        Int(length(range) ÷ chunk_size + (length(range) % chunk_size!=0 ? 1 : 0))
+        Int(length(range) ÷ chunk_size + (length(range)%chunk_size!=0 ? 1 : 0))
     )
 end
 
-@inline function split_range_by_count(range::StepRange{ZZRingElem}, count::ZZRingElem)::Tuple{Vararg{StepRange{ZZRingElem}}}
-    # use split_range_by_size
-    split_range_by_size(range, length(range) )
-end
-
-function test_range_unrolled_256(range)::Nothing
-    # range should have a step of 256 and should start and stop on multiples of 256.
+"""run `test` on all numbers in the given range."""
+function test_range(range::StepRange{ZZRingElem})::Nothing
     for number in range
-        # see form.jl for the computation of and reason behind these values.
-
-        # 27       (false, (2187, 242))       8                 Any[1, 1, 0, 1, 1, 1, 1, 1]
-        # 31       (false, (729, 91))         8                 Any[1, 1, 1, 1, 1, 0, 1, 0]
-        # 47       (false, (729, 137))        8                 Any[1, 1, 1, 1, 0, 1, 0, 1]
-        # 63       (false, (729, 182))        8                 Any[1, 1, 1, 1, 1, 1, 0, 0]
-        # 71       (false, (729, 206))        8                 Any[1, 1, 1, 0, 1, 0, 1, 1]
-        # 91       (false, (729, 263))        8                 Any[1, 1, 0, 1, 1, 1, 0, 1]
-        # 103      (false, (2187, 890))       8                 Any[1, 1, 1, 0, 1, 1, 1, 1]
-        # 111      (false, (729, 319))        8                 Any[1, 1, 1, 1, 0, 1, 1, 0]
-        # 127      (false, (2187, 1093))      8                 Any[1, 1, 1, 1, 1, 1, 1, 0]
-        # 155      (false, (729, 445))        8                 Any[1, 1, 0, 1, 1, 1, 1, 0]
-        # 159      (false, (2187, 1367))      8                 Any[1, 1, 1, 1, 1, 0, 1, 1]
-        # 167      (false, (729, 479))        8                 Any[1, 1, 1, 0, 1, 1, 0, 1]
-        # 191      (false, (2187, 1640))      8                 Any[1, 1, 1, 1, 1, 1, 0, 1]
-        # 207      (false, (729, 593))        8                 Any[1, 1, 1, 1, 0, 0, 1, 1]
-        # 223      (false, (729, 638))        8                 Any[1, 1, 1, 1, 1, 0, 0, 1]
-        # 231      (false, (729, 661))        8                 Any[1, 1, 1, 0, 1, 1, 1, 0]
-        # 239      (false, (2187, 2051))      8                 Any[1, 1, 1, 1, 0, 1, 1, 1]
-        # 251      (false, (729, 719))        8                 Any[1, 1, 0, 1, 1, 0, 1, 1]
-        # 255      (false, (6561, 6560))      8                 Any[1, 1, 1, 1, 1, 1, 1, 1]
-
-        # TODO: Use the above data for precomputation of the values.
-        # all values can be precomputed to a depth of 8.
-
-        for i in (27, 31, 47, 63, 71, 91, 103, 111, 127, 155, 159, 167, 191, 207, 223, 231, 239, 251, 255)
-            test(number + i)
-        end
+        test(number)
     end
 end
 
 """Tests the given chunk using the @threads macro and test_range."""
 function test_chunk(chunk::StepRange{ZZRingElem})::Nothing
     # create ranges from the chunk
-    ranges = split_range(chunk, THREAD_COUNT)
+    ranges = generate_ranges(chunk, THREAD_COUNT)
 
     # then test the ranges
     @threads for i in ranges
@@ -243,7 +239,7 @@ println("Starting computation...")
 try
     for i in chunks
         # TODO: test_chunk generates the ranges in-loop. Try pre-generation.
-        test_range_unrolled_256(i)
+        test_chunk(i)
 
         # after the chunk has been tested update our
         # current progress to the last tested value.
