@@ -48,22 +48,12 @@
 
 # TODO: Try putting all the below into a main function and benchmark.
 
-
-
-#region tools
-"""Functions to create, steralise, load, save and compute various test ranges."""
-module Tools
-
-export setup, test_range_unrolled_256, save
-
 using Nemo, Base.Threads
 
 # CHUNK_SIZE is the size of the data ranges that will be computed one
 # at a time. If the program is terminated the progress will fall back
 # on the last completed chunk.
 const CHUNK_SIZE::ZZRingElem = ZZ(10)^3
-
-const CHUNKS_PER_STEP::ZZRingElem = ZZ(8)
 
 # this is the number of cases that will be computed in a given pass of test_range
 # used to allow exclusion of ranges based on the computations of form.jl
@@ -80,7 +70,7 @@ function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{StepRange{ZZRin
     # Tell Julia to treat SIGINT (user interrupt: "ctrl + c") as a normal exception.
     # This allows it to be handled and for the program to exit gracfully, saving progress.
     Base.exit_on_sigint(false)
-
+    println("..")
     # warn the user if they are using less threads than are avalable.
     if Threads.nthreads() < Sys.CPU_THREADS
         print("WARNING: currently using: $(Threads.nthreads()) threads when: $(Sys.CPU_THREADS) are avalable. ")
@@ -89,15 +79,18 @@ function setup(data_file::String)::Tuple{ZZRingElem,Tuple{Vararg{StepRange{ZZRin
         printstyled("set JULIA_NUM_THREADS=8", color = :red)
         print("\" to run julia.exe on 8 threds.\n")
     end
-
+    println("..")
     goal, current = load(data_file)
-
-    # the current value has already been computed so go to the next one.
-    range = steralise_range_256(zz_range(current+1:goal))
-
-    # split the range into pieces of size CHUNK_SIZE
-    ranges = split_range_by_size(range, CHUNK_SIZE * RANGE_UNROLL_COUNT)
-
+    println("..")
+    # this is the range of numbers that we need to test
+    range = current:goal
+    println("..")
+    # this expands the edges of the range so that
+    range = ((first(range)+1) ÷ RANGE_UNROLL_COUNT):((last(range) + RANGE_UNROLL_COUNT-1) ÷ RANGE_UNROLL_COUNT)
+    println(range)
+    # split the ranges
+    ranges = split_range_by_size(range, CHUNK_SIZE)
+    println("..")
     return (current, ranges)
 end
 
@@ -157,37 +150,44 @@ function zz_range(r::Union{StepRange, UnitRange, ZZRingElemUnitRange})::StepRang
     return ZZ(first(r)):ZZ(step(r)):ZZ(last(r))
 end
 
-"""Steralise the range so that the increment is 256 and both the start and end points are multiples of 256. The endpoints
-will be moved outwards."""
-@inline function steralise_range_256(range::StepRange{ZZRingElem})::StepRange{ZZRingElem}
-    # floor division and multiplication for rounding.
-    (first(range) ÷ 256) * 256 : ZZ(256) : ((last(range) + 255) ÷ 256) * 256
-end
-
-"""Splits the given range into chunks of size `chunk_size`."""
-@inline function split_range_by_size(range::StepRange{ZZRingElem}, chunk_size::ZZRingElem)::Tuple{Vararg{StepRange{ZZRingElem}}}
+"""Splits the given range into chunks of size `size`."""
+@inline function split_range_by_size(range::ZZRingElemUnitRange, size::ZZRingElem)::Tuple{Vararg{ZZRingElemUnitRange}}
     # return the ntuple
     ntuple(
-        # This is the calculation for the ith item.
+        # this is the calculation for the ith item.
         i -> begin
-            start_index = first(range) + (i-1)*chunk_size*step(range)
-            end_index = min(start_index + (chunk_size - 1)*step(range), last(range))
-            start_index:step(range):end_index
+            start_index = first(range) + (i-1)*size
+            end_index = min(start_index + (size - 1), last(range))
+            start_index:end_index
         end,
 
-        # This is how many items are in the Tuple.
-        Int(length(range) ÷ chunk_size + (length(range) % chunk_size!=0 ? 1 : 0))
+        # this is how many items are in the Tuple.
+        Int(length(range) ÷ size + (length(range) % size==0 ? 0 : 1))
     )
 end
 
-@inline function split_range_by_count(range::StepRange{ZZRingElem}, count::ZZRingElem)::Tuple{Vararg{StepRange{ZZRingElem}}}
-    # use split_range_by_size
-    split_range_by_size(range, length(range) )
+"""Splits the given range into `count` chunks."""
+@inline function split_range_by_count(range::ZZRingElemUnitRange, count::ZZRingElem)::Tuple{Vararg{ZZRingElemUnitRange}}
+    size = length(range) ÷ count
+    extra = length(range) % count
+
+    # return the ntuple
+    ntuple(
+        # this is the calculation for the ith item.
+        i -> begin
+            start_index = first(range) + (i - 1)*size + min(i-1, extra)
+            end_index = start_index + size - 1 + (i <= extra ? 1 : 0)
+            start_index:end_index
+        end,
+
+        # this is how many items are in the Tuple.
+        Int(count)
+    )
 end
 
-function test_range_unrolled_256(range)::Nothing
-    # range should have a step of 256 and should start and stop on multiples of 256.
-    for number in range
+"""Tests the given unit range of numbers"""
+function test_range_unrolled_256(range::ZZRingElemUnitRange)::Nothing
+    for index in range
         # see form.jl for the computation of and reason behind these values.
 
         # 27       (false, (2187, 242))       8                 Any[1, 1, 0, 1, 1, 1, 1, 1]
@@ -211,59 +211,58 @@ function test_range_unrolled_256(range)::Nothing
         # 255      (false, (6561, 6560))      8                 Any[1, 1, 1, 1, 1, 1, 1, 1]
 
         # TODO: Use the above data for precomputation of the values.
-        # all values can be precomputed to a depth of 8.
+        # all values can be precomputed to a depth of 8. This would be
+        # done by unrolling the below loop.
 
         for i in (27, 31, 47, 63, 71, 91, 103, 111, 127, 155, 159, 167, 191, 207, 223, 231, 239, 251, 255)
-            test(number + i)
+            test(index * RANGE_UNROLL_COUNT + i)
         end
     end
 end
 
 """Tests the given chunk using the @threads macro and test_range."""
-function test_chunk(chunk::StepRange{ZZRingElem})::Nothing
+function test_chunk(chunk::ZZRingElemUnitRange)::Nothing
     # create ranges from the chunk
-    ranges = split_range(chunk, THREAD_COUNT)
+    ranges = split_range_by_count(chunk, THREAD_COUNT)
 
     # then test the ranges
-    @threads for i in ranges
-        test_range(i)
-    end
-end
-
-end
-#endregion
-
-
-using .Tools
-
-# only goal and current are used during the computations so don't load the other values.
-current, chunks = setup("data")
-
-println("Starting computation...")
-try
-    for i in chunks
-        # TODO: test_chunk generates the ranges in-loop. Try pre-generation.
+    #@threads
+    for i in ranges
         test_range_unrolled_256(i)
-
-        # after the chunk has been tested update our
-        # current progress to the last tested value.
-        # this value has already been verified.
-        global current = last(i)
-
-        #      vvvvvvvvvvvv This clears the previous line and moves the cursor back to overwrite with the new number.
-        print("\e[2K\e[1G"*string(current))
-    end
-    println("Computations finished. Please report `data` back to the centeral database.")
-catch err
-    if isa(err, InterruptException)
-        println("\nUser interrupt detected. Saving progress and quitting...")
-    else
-        println("\nError: $err was thrown. Saving progress and re-throwing...")
-        save("data", current)
-        throw(err)
     end
 end
-save("data", current)
 
+function main()
+    # only goal and current are used during the computations so don't load the other values.
+    current, chunks = setup("data")
 
+    println("Starting computation...")
+    try
+        for i in chunks
+            # TODO: test_chunk generates the ranges in-loop. Try pre-generation.
+            test_chunk(i)
+
+            # after the chunk has been tested update our
+            # current progress to the last tested value.
+            # this value has already been verified.
+            global current = last(i)
+
+            #     vvvvvvvvvvvv This clears the previous line and moves the cursor back to overwrite with the new number.
+            print("\e[2K\e[1G"*string(current))
+        end
+        println("Computations finished. Please report `data` back to the centeral database.")
+    catch err
+        if isa(err, InterruptException)
+            println("\nUser interrupt detected. Saving progress and quitting...")
+        else
+            println("\nError: $err was thrown. Saving progress and re-throwing...")
+            save("data", current)
+            throw(err)
+        end
+    end
+    save("data", current)
+end
+
+println("hello")
+# main()
 # TODO: How to reliably interrupt the program?? SIGINT is not particularily reliable :(
