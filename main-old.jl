@@ -140,7 +140,7 @@ end
 @inline function test(number::ZZRingElem)::Nothing
     init_number::ZZRingElem = number
     number = ((3*((3*number + 1) >> 1) + 1) >> 1) # TODO: expand and simpify.
-    while number<init_number
+    while number>=init_number
         number = is_even(number) ? (number >> 1) : ((3*number + 1) >> 1)
     end
 end
