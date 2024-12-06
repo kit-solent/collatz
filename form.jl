@@ -103,11 +103,27 @@ end
 
 #println(compute_form_step((1, 0), 10, 2)[1])
 
+function simplify_steps(steps)
+    a = Rational(1)
+    b = Rational(0)
+    for i in steps
+        if i==0
+            a = a/2
+            b = b/2
+        elseif i==1
+            a = 3*(a / 2)
+            b = (3*b + 1) / 2
+        end
+    end
+    return a, b
+end
+
 
 for i in 0:256
     t = compute_form(256, i)
     if !t[1]
-        println(string(i)*"      "*string(t)*"        "*string(precompute_form(256, i)[3]) *"\t\t\t"*string(precompute_form(256, i)[4]))
+        val = simplify_steps(precompute_form(256, i)[4])
+        println(string(i)*"      "*string(t)*"        "*string(precompute_form(256, i)[3]) *"\t\t\t"*string(precompute_form(256, i)[4])*"\t\t"*string(val))
     end
 end
 
