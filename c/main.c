@@ -1,5 +1,5 @@
 // NOTE: The limit for the unsigned long long type is: 18446744073709551615
-// When this limit is exceded
+// When this limit is exceded the numbers will overflow and chaos will ensue.
 
 #include <stdio.h>
 #include <omp.h>
