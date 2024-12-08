@@ -1,3 +1,4 @@
+import math
 from fractions import Fraction as f
 
 def will_fall(a:f, b:f):
@@ -46,7 +47,15 @@ for i in range(256):
     if not x[0]:
         print(f"{x[1][0][0]}n + {x[1][0][1]}", end="\t")
         print(f"{nice_fraction(x[1][1][0])}n + {nice_fraction(x[1][1][1])}", end="\t")
-        print(f"({nice_fraction(x[1][2][0])})n + {nice_fraction(x[1][2][1])}", end="\t")
-        if x[1][2][0].denominator == x[1][2][1].denominator:
-            # if the denominators are the same then an expression can be formed that avoids floating point calculations.
-            print(f"({x[1][2][0].numerator}*(i + {x[1][0][1]}) + {x[1][2][1].numerator}) / {x[1][2][0].denominator}", end="\n")
+        transform = x[1][2] # of the form [a, b] where a and b are `Fraction`s
+        a = transform[0]
+        b = transform[1]
+
+        print(f"({nice_fraction(a)})n + {nice_fraction(b)}", end="\t")
+
+        print(f"({nice_fraction(a)})*(i + {x[1][0][1]}) + {nice_fraction(b)}", end="\t")
+        print(f"({nice_fraction(a)})*i + {a * x[1][0][1] + b}", end="\t")
+        # i is a multiple of 256 so
+        if a.denominator == 256:
+            print(f"{a.numerator}*(i >> 8) + {a * x[1][0][1] + b}", end="\t")
+        print()
