@@ -1,5 +1,7 @@
-// NOTE: The limit for the unsigned long long type is: 18446744073709551615
-// When this limit is exceded the numbers will overflow and chaos will ensue.
+// NOTE: The limit for the `unsigned long long` type is: 18446744073709551615
+// NOTE: The Collatz Conjecture lower limit so far is  : 295000000000000000000
+
+// When the `unsigned long long` limit is exceded the numbers will overflow and chaos will ensue.
 
 // TODO: Consider caching numbers. Probably not worth the overhead though.
 
@@ -37,12 +39,12 @@ int main() {
     omp_set_num_threads(omp_get_max_threads());
     printf("Computing on %d threads...\n", omp_get_max_threads());
 
-    const unsigned long long limit = 100000000000; // 10^11
+    const unsigned long long limit = 100000000000 * 256; // 10^11, gcc will precompute the multiplication.
 
     // NOTE: `static` could be replaced with `dynamic` to balence the workload
     // accross the threads better but at the cost of scheduling overhead.
     #pragma omp parallel for schedule(static, 512)
-    for (unsigned long long i = 0; i < limit; i+=256) {
+    for (unsigned long long i = 0; i < limit; i++) {
         // see simple.py for the algorithm behind these results. Collumns are: form, result, transform, test value, simplifications, etc...
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // 256n + 27       2187n + 242     (2187/256)n + 2903/256  (2187/256)*(i + 27) + 2903/256  (2187/256)*i + 242      2187*(i >> 8) + 242
@@ -67,11 +69,13 @@ int main() {
         //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
         // only these 19 values in every 256 need testing.
-        // TODO: consider incrementing the loop by 1 to remove the i >> 8 = i / 256 step. Results would then need
-        // to be scaled up again afterwords.
 
-        unsigned long long _2187 = 2187*(i >> 8);
-        unsigned long long _729 = 729*(i >> 8);
+        // NOTE: interesting fact:
+        // 729  = 3^6
+        // 2187 = 3^7
+        // 6561 = 3^8
+        unsigned long long _2187 = 2187*i;
+        unsigned long long _729 = 729*i;
 
         test(_2187 + 242);
         test(_729 + 91);
@@ -91,7 +95,7 @@ int main() {
         test(_729 + 661);
         test(_2187 + 2051);
         test(_729 + 719);
-        test(6561*(i >> 8) + 6560);
+        test(6561*i + 6560);
     }
 
     return 0;
