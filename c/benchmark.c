@@ -23,6 +23,3 @@ int main() {
 
     return 0;
 }
-
-// Computing on 8 threads...
-// Execution time: 13.671305 seconds
