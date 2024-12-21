@@ -8,7 +8,7 @@
 
 #include <stdio.h>
 #include <omp.h>
-// #include <gmp.h> // TODO: get GMP working.
+#include <gmp.h> // TODO: get GMP working.
 
 
 inline void test(unsigned long long num) {
