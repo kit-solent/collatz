@@ -40,22 +40,27 @@ def nice_fraction(fraction:f):
     except BaseException as err:
         print(f"OOPSIES: {err}")
 
-    return f"{fraction.numerator}{f"/{fraction.denominator}" if fraction.denominator > 1 else ""}"
+    return f"{fraction.numerator}" + (f"/{fraction.denominator}" if fraction.denominator > 1 else "")
+
+
+
+
+
+
+collumns = "{:<15}{:<15}{:<26}{:<35}{:<24}{:<30}"
+
+# Print headers with fixed-width fields
+print(collumns.format("form", "result", "transform", "test", "value", "simplification"))
 
 for i in range(256):
     x = will_fall(256, f(i))
     if not x[0]:
-        print(f"{x[1][0][0]}n + {x[1][0][1]}", end="\t")
-        print(f"{nice_fraction(x[1][1][0])}n + {nice_fraction(x[1][1][1])}", end="\t")
-        transform = x[1][2] # of the form [a, b] where a and b are `Fraction`s
-        a = transform[0]
-        b = transform[1]
+        form = f"{x[1][0][0]}n + {x[1][0][1]}"
+        result = f"{nice_fraction(x[1][1][0])}n + {nice_fraction(x[1][1][1])}"
+        transform = f"({nice_fraction(x[1][2][0])})n + {nice_fraction(x[1][2][1])}"
+        test = f"({nice_fraction(x[1][2][0])})*(i + {x[1][0][1]}) + {nice_fraction(x[1][2][1])}"
+        value = f"({nice_fraction(x[1][2][0])})*i + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}"
+        simplification = f"{x[1][2][0].numerator}*(i >> 8) + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}" if x[1][2][0].denominator == 256 else ""
 
-        print(f"({nice_fraction(a)})n + {nice_fraction(b)}", end="\t")
-
-        print(f"({nice_fraction(a)})*(i + {x[1][0][1]}) + {nice_fraction(b)}", end="\t")
-        print(f"({nice_fraction(a)})*i + {a * x[1][0][1] + b}", end="\t")
-        # i is a multiple of 256 so
-        if a.denominator == 256:
-            print(f"{a.numerator}*(i >> 8) + {a * x[1][0][1] + b}", end="\t")
-        print()
+        # Print each row with fixed-width fields
+        print(collumns.format(form, result, transform, test, value, simplification))

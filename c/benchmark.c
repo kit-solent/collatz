@@ -9,7 +9,7 @@ int main() {
     clock_gettime(CLOCK_MONOTONIC, &start_time);
 
     // Your code here (e.g., calling a function or performing a task)
-    system("C:\\Users\\nelso\\Desktop\\projects\\collatz\\c\\main.exe");
+    int result = system("./main");
 
     // Record the end time
     clock_gettime(CLOCK_MONOTONIC, &end_time);
@@ -20,6 +20,7 @@ int main() {
 
     // Print the time taken
     printf("Execution time: %.6f seconds\n", time_taken);
+    printf("Result: %d\n", result);
 
     return 0;
 }

@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Regenerate executables and run the benchmarks.
+
+# Delete the two executables
+if [ -f main ]; then
+    rm main
+fi
+
+if [ -f benchmark ]; then
+    rm benchmark
+fi
+
+# Regenerate them
+gcc -O3 -fopenmp -flto -ftree-vectorize -lgmp -march=native main.c -o main
+if [ $? -ne 0 ]; then
+    echo "Failed to compile main.c"
+    exit 1
+fi
+
+gcc -O3 benchmark.c -o benchmark
+if [ $? -ne 0 ]; then
+    echo "Failed to compile benchmark.c"
+    exit 1
+fi
+
+# Execute the benchmark file
+./benchmark
+if [ $? -ne 0 ]; then
+    echo "Benchmark execution failed"
+    exit 1
+fi
