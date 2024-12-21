@@ -1,0 +1,24 @@
+Python 3.10.12 (main, Nov  6 2024, 20:22:13) [GCC 11.4.0] on linux
+Type "help", "copyright", "credits" or "license" for more information.
+>>> x=[27,31,47,63,71,91,103,111,127,155,159,167,191,207,223,231,239,251,255]
+>>> for i in range(len(x)-1):print(x[i+1]-x[i])
+...
+4
+16
+16
+8
+20
+12
+8
+16
+28
+4
+8
+24
+16
+16
+8
+8
+12
+4
+>>>

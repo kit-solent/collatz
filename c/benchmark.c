@@ -27,7 +27,7 @@ int main() {
     clock_gettime(CLOCK_MONOTONIC, &start_time2);
 
     // Your code here (e.g., calling a function or performing a task)
-    int result = system("./main");
+    int result2 = system("./main2");
 
     // Record the end time
     clock_gettime(CLOCK_MONOTONIC, &end_time2);
@@ -39,11 +39,12 @@ int main() {
 
 
     // Print the time taken
+    printf("\n");
     printf("Execution time for main.c: %.6f seconds\n", time_taken);
     printf("Exit code for main.c: %d\n", result);
-    print("\n");
+    printf("\n");
     printf("Execution time for main2.c: %.6f seconds\n", time_taken2);
-    printf("Exit code for main2.c: %d\n", result);
+    printf("Exit code for main2.c: %d\n", result2);
 
     return 0;
 }
