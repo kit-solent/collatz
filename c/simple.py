@@ -46,15 +46,17 @@ collumns = "{:<15}{:<15}{:<26}{:<35}{:<24}{:<30}"
 # Print headers with fixed-width fields
 print(collumns.format("form", "result", "transform", "test", "value", "simplification"))
 
-for i in range(256):
-    x = will_fall(256, f(i))
+const = 2048 # 256
+
+for i in range(const):
+    x = will_fall(const, f(i))
     if not x[0]:
         form = f"{x[1][0][0]}n + {x[1][0][1]}"
         result = f"{nice_fraction(x[1][1][0])}n + {nice_fraction(x[1][1][1])}"
         transform = f"({nice_fraction(x[1][2][0])})n + {nice_fraction(x[1][2][1])}"
         test = f"({nice_fraction(x[1][2][0])})*(i + {x[1][0][1]}) + {nice_fraction(x[1][2][1])}"
-        value = f"({nice_fraction(x[1][2][0])})*i + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}"
-        simplification = f"{x[1][2][0].numerator}*(i >> 8) + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}" if x[1][2][0].denominator == 256 else ""
+        value = f"({nice_fraction(x[1][2][0])})*i + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}" #                                     vvvvv not sure about this part TODO
+        simplification = f"{x[1][2][0].numerator}*(i >> 8) + {nice_fraction(x[1][2][0] * x[1][0][1] + x[1][2][1])}" if x[1][2][0].denominator == const else ""
 
         # Print each row with fixed-width fields
         print(collumns.format(form, result, transform, test, value, simplification))
