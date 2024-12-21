@@ -1,4 +1,3 @@
-import math
 from fractions import Fraction as f
 
 def will_fall(a:f, b:f):
@@ -33,7 +32,6 @@ def will_fall(a:f, b:f):
         else:
             return (False, data)
 
-
 def nice_fraction(fraction:f):
     try:
         fraction = f(fraction)
@@ -41,10 +39,6 @@ def nice_fraction(fraction:f):
         print(f"OOPSIES: {err}")
 
     return f"{fraction.numerator}" + (f"/{fraction.denominator}" if fraction.denominator > 1 else "")
-
-
-
-
 
 
 collumns = "{:<15}{:<15}{:<26}{:<35}{:<24}{:<30}"

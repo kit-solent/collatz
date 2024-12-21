@@ -7,6 +7,10 @@ if [ -f main ]; then
     rm main
 fi
 
+if [ -f main2 ]; then
+    rm main2
+fi
+
 if [ -f benchmark ]; then
     rm benchmark
 fi
@@ -17,6 +21,13 @@ if [ $? -ne 0 ]; then
     echo "Failed to compile main.c"
     exit 1
 fi
+
+gcc -O3 -fopenmp -flto -ftree-vectorize -lgmp -march=native main2.c -o main2
+if [ $? -ne 0 ]; then
+    echo "Failed to compile main2.c"
+    exit 1
+fi
+
 
 gcc -O3 benchmark.c -o benchmark
 if [ $? -ne 0 ]; then

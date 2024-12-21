@@ -39,7 +39,7 @@ int main() {
     omp_set_num_threads(omp_get_max_threads());
     printf("Computing on %d threads...\n", omp_get_max_threads());
 
-    const unsigned long long limit = 100000000ULL * 256; // 10^8, gcc will precompute the multiplication.
+    const unsigned long long limit = 1000000ULL * 256; // 10^6, gcc will precompute the multiplication.
 
     // NOTE: `static` could be replaced with `dynamic` to balence the workload
     // accross the threads better but at the cost of scheduling overhead.
