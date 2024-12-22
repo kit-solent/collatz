@@ -1,0 +1,1 @@
+flag = "picoCTF{REDACTED}"
