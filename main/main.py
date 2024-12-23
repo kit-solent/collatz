@@ -1,5 +1,5 @@
 from __future__ import annotations
-import copy, maths
+import copy, math
 
 class Number():
     def __init__(self, value:int|str|bytes|'Number'):
@@ -400,9 +400,12 @@ class Transform():
         self.min_value = min_value
 
     def __repr__(self):
+        # TODO: The condition means it returns an empty string.
         return f'Transform({self.start}, {self.end}, transform={self.transform}, steps={self.steps}' + \
             f', has_fallen={self.has_fallen})' if self.has_fallen is not None else '' + \
             f', min_value={self.min_value})' if (self.min_value is not None) and (self.has_fallen is not None) else ''
+
+    __str__ = __repr__
 
 class Form():
     """
@@ -425,7 +428,7 @@ class Form():
         except AssertionError:
             raise ValueError('Value a must be greater than 0.')
 
-        if not maths.is_finite(a):
+        if not math.isfinite(a):
             raise ValueError('Value a must be finite.')
 
         try:
@@ -433,7 +436,7 @@ class Form():
         except ValueError:
             raise ValueError(f'Failed to convert value: {b} of type: {type(b)} to type float.')
 
-        if not maths.is_finite(b):
+        if not math.isfinite(b):
             raise ValueError('Value b must be finite.')
 
         self.a = float(a)
@@ -568,7 +571,7 @@ class Form():
     __ge__ = lambda self, other: self > other or self == other
 
     #endregion
-    #region other operators
+    #region misc
     # bool
     def __bool__(self):
         return True
@@ -576,6 +579,19 @@ class Form():
     # repr
     def __repr__(self):
         return f'Form({self.a}, {self.b})'
+
+    # call
+    def __call__(self, n:int|float|Number|'Form'):
+        """
+        Returns the value of the form at n.
+        """
+        if type(n) in (int, float, Number):
+            n = float(n)
+            return self.a * n + self.b
+        elif isinstance(n, Form):
+            return Form(self.a * n.a, self.a * n.b + self.b)
+        else:
+            raise ValueError(f'Cannot call Form with type: {type(n)}.')
     #endregion
 
     def parity(self):
@@ -612,7 +628,7 @@ class Form():
         else:
             return None # if a is odd then the parity of the form cannot be determined.
 
-    def step(self):
+    def step(self, shortcut = False): # TODO: add shortcut form
         """
         Returns the next form in the Collatz sequence and the transform required to get there.
         Return None if the next form cannot be determined.
@@ -638,13 +654,13 @@ class Form():
 
         while True:
             # compute the next step
-            prev_form = form.step()
+            step = form.step()
 
-            if prev_form is None:
+            if step is None:
                 return Transform(self, form, steps, False)
 
-            form = prev_form[0]
-            transform = transform * prev_form[1]
+            form = step[0]
+            transform = step[1](transform)
 
             steps += 1
             comp = form < self
@@ -667,10 +683,12 @@ class Form():
 
         while form.parity():
             # will never be None due to the parity check.
-            form = form.step()
+            step = form.step()
+            transform = step[1](transform)
+            form = step[0]
             steps += 1
 
-        return Transform(self, form, steps)
+        return Transform(self, form, transform, steps)
 
     def split_form(self, parts:int):
         """
@@ -683,10 +701,15 @@ Form.BASIS = Form(1, 0)
 
 
 
+print(Transform(Form(1, 0), Form(0.5, 0.5), Form(0.5, 0.5), 1).__repr__())
+exit()
+
 
 # The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.
 test = Form(4, 1)
-print(test.compute_fall()) # (True, Form(3, 1), 3)
+x= test.compute_fall()
+print(x) # (True, Form(3, 1), 3)
+print(type(x))
 
 # The below code demonstrates that every number of the form 4n + 3 will go to to 9n + 8 in 4 steps at which point it's parity becomes unknown.
 test = Form(4, 3)

@@ -1,9 +1,5 @@
-// NOTE: The limit for the `unsigned __int128` type is: 18446744073709551615
+// NOTE: The limit for the `unsigned __int128` type is: 340282366920938463463374607431768211455
 // NOTE: The Collatz Conjecture lower limit so far is  : 295000000000000000000
-
-// When the `unsigned __int128` limit is exceeded the numbers will overflow and chaos will ensue.
-
-// TODO: Consider caching numbers. Probably not worth the overhead though.
 
 #include <stdio.h>
 #include <omp.h>
@@ -20,7 +16,7 @@ inline void test(unsigned __int128 num) {
         // NOTE: this step could be performed in binary with: `num = ((num << 1) | 1) + num;`
         // but due to compiler optimisations would probably have no effect and could even be
         // slower due to modern CPU multiplication methods.
-        num = 3*num + 1;
+        num = 3 * num + 1;
 
         // and then divide until odd.
         num >>= __builtin_ctz(num);
@@ -33,7 +29,7 @@ inline void test(unsigned __int128 num) {
 }
 
 int main() {
-    omp_set_num_threads(omp_get_max_threads());
+    // openmp uses all available threads by default.
     printf("Computing on %d threads...\n", omp_get_max_threads());
 
     // 10^11, gcc will precompute the division.
@@ -47,7 +43,7 @@ int main() {
     // NOTE: `static` could be replaced with `dynamic` to balance the workload
     // across the threads better but at the cost of scheduling overhead.
     #pragma omp parallel for schedule(static, 512)
-    for (unsigned __int128 i = 0; i < limit; i+=1) {
+    for (unsigned __int128 i = 0; i < limit; i++) {
         // see simple.py for the algorithm behind these test values.
         // NOTE: (i << 8) has been replaced with i as we are incrementing our loop by 1 rather than 256.
 
@@ -83,10 +79,11 @@ int main() {
     return 0;
 }
 
-// gcc -O3 -static -fopenmp -flto -ftree-vectorize -m64 -march=native main.c -o main
+// gcc -O3 -fopenmp -flto -ftree-vectorize -m64 -march=native main.c -o main
 
+// "#" = not included.
 // -O3 is the flag for the highest optimisation level.
-// -static means to bundle the required libraries into the executable.
+//# -static means to bundle the required libraries into the executable.
 // -fopenmp is the flag for OpenMP support.
 // -flto is the flag for link time optimisation.
 // -ftree-vectorize is the flag for loop vectorisation.
