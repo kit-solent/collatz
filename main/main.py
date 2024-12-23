@@ -1,3 +1,5 @@
+from __future__ import annotations
+import copy, maths
 
 class Number():
     def __init__(self, value:int|str|bytes|'Number'):
@@ -378,35 +380,68 @@ class Number():
 
         return count
 
+class Transform():
+    """
+    Reperesents a transformation from one `Form` to another.
+    """
+    def __init__(self, start:Form, end:Form, transform:Form, steps:int, has_fallen:bool = None, min_value:int = None):
+        """
+        start: The starting form.
+        end: The ending form.
+        steps: The number of steps it took to reach the ending form.
+        has_fallen: True if the form has fallen below the starting form, False if it has not, None if it is unknown.
+        min_value: The minimum value at which the form has fallen below the starting form.
+        """
+        self.start = start
+        self.end = end
+        self.transform = transform
+        self.steps = steps
+        self.has_fallen = has_fallen
+        self.min_value = min_value
+
+    def __repr__(self):
+        return f'Transform({self.start}, {self.end}, transform={self.transform}, steps={self.steps}' + \
+            f', has_fallen={self.has_fallen})' if self.has_fallen is not None else '' + \
+            f', min_value={self.min_value})' if (self.min_value is not None) and (self.has_fallen is not None) else ''
+
 class Form():
     """
     Reperesents all numbers of the linear form an + b
     """
-    def __init__(self, a:int|str|bytes|'Number', b:int|str|bytes|'Number'):
+    # We can't deffine it yet but we can type it.
+    # BASIS = Form(1, 0)
+    BASIS: 'Form'
+
+    def __init__(self, a:int|float|str|bytes|'Number', b:int|float|str|bytes|'Number'):
         """
         NOTE: a and b are stored as integers rather than Number objects because
         0 is a valid value for b and the Number class does not support 0.
         """
         try:
-            a = int(a)
+            a = float(a)
             assert a > 0
         except ValueError:
-            raise ValueError(f'Failed to convert value: {a} of type: {type(a)} to type int.')
+            raise ValueError(f'Failed to convert value: {a} of type: {type(a)} to type float.')
         except AssertionError:
             raise ValueError('Value a must be greater than 0.')
 
+        if not maths.is_finite(a):
+            raise ValueError('Value a must be finite.')
+
         try:
-            b = int(b)
+            b = float(b)
         except ValueError:
-            raise ValueError(f'Failed to convert value: {b} of type: {type(b)} to type int.')
+            raise ValueError(f'Failed to convert value: {b} of type: {type(b)} to type float.')
 
-        self.a = int(a)
-        self.b = int(b)
+        if not maths.is_finite(b):
+            raise ValueError('Value b must be finite.')
 
+        self.a = float(a)
+        self.b = float(b)
 
     #region operators
     # +
-    def __add__(self, other:int|Number|'Form'):
+    def __add__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a, self.b + other)
         elif isinstance(other, Form):
@@ -415,7 +450,7 @@ class Form():
             raise ValueError(f'Cannot add Form with type: {type(other)}.')
 
     # -
-    def __sub__(self, other:int|Number|'Form'):
+    def __sub__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a, self.b - other)
         elif isinstance(other, Form):
@@ -424,7 +459,7 @@ class Form():
             raise ValueError(f'Cannot subtract Form with type: {type(other)}.')
 
     # *
-    def __mul__(self, other:int|Number|'Form'):
+    def __mul__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a * other, self.b * other)
         elif isinstance(other, Form):
@@ -433,7 +468,7 @@ class Form():
             raise ValueError(f'Cannot multiply Form with type: {type(other)}.')
 
     # /
-    def __truediv__(self, other:int|Number|'Form'):
+    def __truediv__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a / other, self.b / other)
         elif isinstance(other, Form):
@@ -442,7 +477,7 @@ class Form():
             raise ValueError(f'Cannot divide Form with type: {type(other)}.')
 
     # //
-    def __floordiv__(self, other:int|Number|'Form'):
+    def __floordiv__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a // other, self.b // other)
         elif isinstance(other, Form):
@@ -451,7 +486,7 @@ class Form():
             raise ValueError(f'Cannot divide Form with type: {type(other)}.')
 
     # %
-    def __mod__(self, other:int|Number|'Form'):
+    def __mod__(self, other:int|float|Number|'Form'):
         if isinstance(other, (int, Number)):
             return Form(self.a % other, self.b % other)
         elif isinstance(other, Form):
@@ -477,7 +512,8 @@ class Form():
     # <
     def __lt__(self, other:'Form'):
         """
-        Return True if self is smaller than other for all positive values of n, otherwise return False.
+        Return True if self is smaller than other for large enough values of n, otherwise return False.
+        Also returns the point at which the forms intersect.
         """
         if not isinstance(other, Form):
             raise ValueError(f'Cannot compare Form with type: {type(other)}.')
@@ -489,79 +525,72 @@ class Form():
             # if a is different, then the forms (modeled as lines) will intersect at some point.
             # an + b = xn + y
             # an - xn = n(a - x) = y - b
-            # n = (y - b) / (a - x)
+            # n = (y - b) / (a - x) = (b - y) / (x - a)
 
             # This is the x value of the intersection point.
             point = (other.b - self.b) / (self.a - other.a)
 
-            if point <= 0:
-                # if the intersection point is negative then the bigger form can be established by testing n = 1.
-                return self.a + self.b < other.a + other.b
-            else:
-                # if the intersection point is positive then all values of n smaller than that point will be smaller for either self or other
-                # and all values of n greater than that point will be smaller for the other form.
-                # Since there are values for which self is bigger and values for which it is smaller return False as this is a strict test.
-                return False
+            # check a point beyond the intersection point.
+            check = (point + 1)*self.a + self.b < (point + 1)*other.a + other.b
 
-    # <= # NOTE: This is a less strict version of the < operator and is not what you might expect from the <= operator.
-    # use `self < other or self == other` for this behavior instead.
-    def __le__(self, other:'Form'):
-        """
-        Return True if self is smaller than other for large enough positive values of n, otherwise return False.
-        """
-        if not isinstance(other, Form):
-            raise ValueError(f'Cannot compare Form with type: {type(other)}.')
+            return check, point
 
-        if self.a == other.a:
-            # if a is the same, then the form with the smaller b is smaller.
-            return self.b < other.b
-        else:
-            # if a is different, then the forms (modeled as lines) will intersect at some point.
-            # an + b = xn + y
-            # an - xn = n(a - x) = y - b
-            # n = (y - b) / (a - x)
-
-            # This is the x value of the intersection point.
-            point = (other.b - self.b) / (self.a - other.a)
-
-            if point <= 0:
-                # if the intersection point is negative then the bigger form can be established by testing n = 1.
-                return self.a + self.b < other.a + other.b
-            else:
-                # if the intersection point is positive then all values of n smaller than that point will be smaller for either self or other
-                # and all values of n greater than that point will be smaller for the other form.
-                # As this is the non-strict version of the < test we can test any point greater than the intersection point.
-                new_point = point + 1
-                return new_point * self.a + self.b < new_point * other.a + other.b
+    # <=
+    __le__ = lambda self, other: self < other or self == other
 
     # >
     def __gt__(self, other:'Form'):
         """
-        Return True if self is greater than other for all positive values of n, otherwise return False.
+        Return True if self is bigger than other for large enough values of n, otherwise return False.
+        Also returns the point at which the forms intersect.
         """
         if not isinstance(other, Form):
             raise ValueError(f'Cannot compare Form with type: {type(other)}.')
 
-        return not (self < other or self == other)
+        if self.a == other.a:
+            # if a is the same, then the form with the smaller b is smaller.
+            return self.b > other.b
+        else:
+            # if a is different, then the forms (modeled as lines) will intersect at some point.
+            # an + b = xn + y
+            # an - xn = n(a - x) = y - b
+            # n = (y - b) / (a - x) = (b - y) / (x - a)
 
-    # >= # NOTE: This is a less strict version of the > operator and is not what you might expect from the >= operator.
-    # use `self > other or self == other` for this behavior instead.
-    def __ge__(self, other:'Form'):
-        """
-        Return True if self is greater than other for large enough positive values of n, otherwise return False.
-        """
-        raise NotImplementedError('The >= operator is not yet implemented for Form objects.')
+            # This is the x value of the intersection point.
+            point = (other.b - self.b) / (self.a - other.a)
 
-        if not isinstance(other, Form):
-            raise ValueError(f'Cannot compare Form with type: {type(other)}.')
+            # check a point beyond the intersection point.
+            check = (point + 1)*self.a + self.b > (point + 1)*other.a + other.b
 
-        return not (self < other)
+            return check, point
+
+    # >=
+    __ge__ = lambda self, other: self > other or self == other
+
     #endregion
     #region other operators
     # bool
     def __bool__(self):
         return True
+
+    # repr
+    def __repr__(self):
+        return f'Form({self.a}, {self.b})'
     #endregion
+
+    def parity(self):
+        """
+        Returns the parity of the form.
+        -1 = odd
+        0 = unknown
+        1 = even
+        """
+        if self.a % 2 == 0:
+            return 1 if (self.b % 2 == 0) else -1
+        else:
+            return 0
+
+        # NOTE: self.parity() is True if the parity is known because bool(1) == bool(-1) == True
 
     def is_even(self):
         """
@@ -585,14 +614,80 @@ class Form():
 
     def step(self):
         """
-        Returns the next form in the Collatz sequence.
+        Returns the next form in the Collatz sequence and the transform required to get there.
         Return None if the next form cannot be determined.
         """
         if self.is_even():
-            return Form(self.a // 2, self.b // 2)
+            return Form(self.a // 2, self.b // 2), Form(0.5, 0.5)
         elif self.is_odd():
-            return Form(3*self.a, 3*self.b + 1)
+            return Form(3*self.a, 3*self.b + 1), Form(3, 1)
         else:
             return None
 
+    def compute_fall(self):
+        """
+        Computes the form until it falls below the starting form or its parity cannot be determined.
+        Returns True if it falls below it's starting value or False otherwise and
+        the form at which it is below it's starting value or the form at which it's parity became unknown.
+        If the fall is conditional then the minimum value for the fall is returned along with the form.
+        returns `False, form, steps` or `True, form, steps` or `True, form, steps, min_value`
+        """
+        form = copy.copy(self)
+        steps = 0
+        transform = Form.BASIS
 
+        while True:
+            # compute the next step
+            prev_form = form.step()
+
+            if prev_form is None:
+                return Transform(self, form, steps, False)
+
+            form = prev_form[0]
+            transform = transform * prev_form[1]
+
+            steps += 1
+            comp = form < self
+            if comp[0]:
+                # the intersect must be strictly smaller than 1 for self to be bigger for every valid case (n > 0, n ∈ Z)
+                if comp[1] < 1:
+                    return Transform(self, form, steps, True)
+                else:
+                    return Transform(self, form, steps, True, comp[1])
+
+    def compute_full(self):
+        """
+        Computes the form until it's parity becomes unknown and returns the form at which it's parity became unknown.
+        If the parity is unknown from the start then a copy of the original form is returned.
+        Also returns the number of steps it took to reach the unknown parity.
+        """
+        form = copy.copy(self)
+        steps = 0
+        transform = Form.BASIS
+
+        while form.parity():
+            # will never be None due to the parity check.
+            form = form.step()
+            steps += 1
+
+        return Transform(self, form, steps)
+
+    def split_form(self, parts:int):
+        """
+        Splits self into `parts` parts and returns them in a tuple.
+        """
+        pass # TODO
+
+# Now that the Form class is defined we can define the BASIS attribute.
+Form.BASIS = Form(1, 0)
+
+
+
+
+# The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.
+test = Form(4, 1)
+print(test.compute_fall()) # (True, Form(3, 1), 3)
+
+# The below code demonstrates that every number of the form 4n + 3 will go to to 9n + 8 in 4 steps at which point it's parity becomes unknown.
+test = Form(4, 3)
+print(test.compute_fall()) # (False, Form(9, 8), 4)
