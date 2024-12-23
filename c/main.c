@@ -1,19 +1,16 @@
-// NOTE: The limit for the `unsigned long long` type is: 18446744073709551615
+// NOTE: The limit for the `unsigned __int128` type is: 18446744073709551615
 // NOTE: The Collatz Conjecture lower limit so far is  : 295000000000000000000
 
-// When the `unsigned long long` limit is exceded the numbers will overflow and chaos will ensue.
+// When the `unsigned __int128` limit is exceeded the numbers will overflow and chaos will ensue.
 
 // TODO: Consider caching numbers. Probably not worth the overhead though.
 
-
 #include <stdio.h>
 #include <omp.h>
-#include <gmp.h> // NOTE: given that my code is compiled and run through WSL this error is not a problem.
 
-
-inline void test(unsigned long long num) {
+inline void test(unsigned __int128 num) {
     // make a copy for comparison
-    unsigned long long init_num = num;
+    unsigned __int128 init_num = num;
 
     // NOTE: initially num will be of the form 4n + 3
 
@@ -25,8 +22,8 @@ inline void test(unsigned long long num) {
         // slower due to modern CPU multiplication methods.
         num = 3*num + 1;
 
-        // and then divide untill odd.
-        num >>= __builtin_ctzll(num);
+        // and then divide until odd.
+        num >>= __builtin_ctz(num);
 
         // after this point num should be compared with init_num
 
@@ -40,24 +37,26 @@ int main() {
     printf("Computing on %d threads...\n", omp_get_max_threads());
 
     // 10^11, gcc will precompute the division.
-    const unsigned long long limit = 100000000000ULL / 256;
+    // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
+    // the rest of the expression will be automatically promoted to __int128.
+    const unsigned __int128 limit = (unsigned __int128)10000000000 * 10 / 256;
     // NOTE: the limit is divided by 256 as we are incrementing our loop by 1 rather than 256.
-    // each loop iteration tests the required 19 values for it's 256 value chunk. This means
+    // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
 
-    // NOTE: `static` could be replaced with `dynamic` to balence the workload
-    // accross the threads better but at the cost of scheduling overhead.
+    // NOTE: `static` could be replaced with `dynamic` to balance the workload
+    // across the threads better but at the cost of scheduling overhead.
     #pragma omp parallel for schedule(static, 512)
-    for (unsigned long long i = 0; i < limit; i++) {
+    for (unsigned __int128 i = 0; i < limit; i+=1) {
         // see simple.py for the algorithm behind these test values.
-        // NOTE: (i << 8) has been replaced with i as we are incrementing out loop by 1 rather than 256.
+        // NOTE: (i << 8) has been replaced with i as we are incrementing our loop by 1 rather than 256.
 
         // NOTE: interesting fact:
         // 729  = 3^6
         // 2187 = 3^7
         // 6561 = 3^8
-        unsigned long long _2187 = 2187*i;
-        unsigned long long _729 = 729*i;
+        unsigned __int128 _2187 = 2187 * i;
+        unsigned __int128 _729 = 729 * i;
 
         // only these 19 values in every 256 need testing.
         test(_2187 + 242);
@@ -78,14 +77,22 @@ int main() {
         test(_729 + 661);
         test(_2187 + 2051);
         test(_729 + 719);
-        test(6561*i + 6560);
+        test(6561 * i + 6560);
     }
 
     return 0;
 }
 
-// use -fopt-info-vec for information on loop vectorisation.
-// the `-march=native` means to compile for my specific CPU. Remove this flag for a more general exe
-// replace `main` with `main.exe` for windows.
+// gcc -O3 -static -fopenmp -flto -ftree-vectorize -m64 -march=native main.c -o main
 
-// gcc -O3 -fopenmp -flto -ftree-vectorize -lgmp -march=native main.c -o main
+// -O3 is the flag for the highest optimisation level.
+// -static means to bundle the required libraries into the executable.
+// -fopenmp is the flag for OpenMP support.
+// -flto is the flag for link time optimisation.
+// -ftree-vectorize is the flag for loop vectorisation.
+// -m64 is the flag to compile for 64 bit.
+
+// -march=native is the flag to compile for the specific CPU. Remove this for a more general executable.
+
+// main.c is the target file
+// -o main is the output file, replace "main" with "main.exe" when running on windows.

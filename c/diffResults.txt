@@ -21,3 +21,5 @@
 4
 >>>
 
+NOTE: In graph.png for every integer along the x axis it takes exactly 3 collatz steps for the value in the higher line to reach the
+value in the lower line at that same x value.
