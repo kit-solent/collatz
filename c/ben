@@ -2,16 +2,24 @@
 
 # Regenerate executables and run the benchmarks.
 
-# Delete the two executables
+# Record if the executables already existed
+main_existed=false
+main2_existed=false
+benchmark_existed=false
+
+# Delete the two executables if they exist
 if [ -f main ]; then
+    main_existed=true
     rm main
 fi
 
 if [ -f main2 ]; then
+    main2_existed=true
     rm main2
 fi
 
 if [ -f benchmark ]; then
+    benchmark_existed=true
     rm benchmark
 fi
 
@@ -40,4 +48,17 @@ fi
 if [ $? -ne 0 ]; then
     echo "Benchmark execution failed"
     exit 1
+fi
+
+# Clean up the executables if they didn't already exist
+if [ "$main_existed" = false ]; then
+    rm main
+fi
+
+if [ "$main2_existed" = false ]; then
+    rm main2
+fi
+
+if [ "$benchmark_existed" = false ]; then
+    rm benchmark
 fi

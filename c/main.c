@@ -1,9 +1,11 @@
 // NOTE: The limit for the `unsigned __int128` type is: 340282366920938463463374607431768211455
-// NOTE: The Collatz Conjecture lower limit so far is  : 295000000000000000000
+// NOTE: The Collatz Conjecture lower limit so far is : 295000000000000000000
+// NOTE: While overflow could occour when testing higher values the unsigned __int128 limit is probably high enough.
 
 #include <stdio.h>
 #include <omp.h>
 
+// inline may not be needed here.
 inline void test(unsigned __int128 num) {
     // make a copy for comparison
     unsigned __int128 init_num = num;

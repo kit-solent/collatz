@@ -383,8 +383,11 @@ class Number():
 class Transform():
     """
     Reperesents a transformation from one `Form` to another.
+    NOTE: This class serves to store transformation information but
+    does not validate the data it holds. The is_valid method can be used
+    to check if the data is valid.
     """
-    def __init__(self, start:Form, end:Form, transform:Form, steps:int, has_fallen:bool = None, min_value:int = None):
+    def __init__(self, start:Form, end:Form, transform:Form = None, steps:int = None, has_fallen:bool = None, min_value:int = None):
         """
         start: The starting form.
         end: The ending form.
@@ -392,6 +395,13 @@ class Transform():
         has_fallen: True if the form has fallen below the starting form, False if it has not, None if it is unknown.
         min_value: The minimum value at which the form has fallen below the starting form.
         """
+        assert isinstance(start, Form), "start must be of type Form."
+        assert isinstance(end, Form), "end must be of type Form."
+        assert transform is None or isinstance(transform, Form), "transform must be of type Form."
+        assert steps is None or isinstance(steps, int), "steps must be of type int."
+        assert has_fallen is None or isinstance(has_fallen, bool), "has_fallen must be of type bool."
+        assert min_value  is None or isinstance(min_value, int), "min_value must be of type int."
+
         self.start = start
         self.end = end
         self.transform = transform
@@ -402,10 +412,31 @@ class Transform():
     def __repr__(self):
         # TODO: The condition means it returns an empty string.
         return f'Transform({self.start}, {self.end}, transform={self.transform}, steps={self.steps}' + \
-            f', has_fallen={self.has_fallen})' if self.has_fallen is not None else '' + \
-            f', min_value={self.min_value})' if (self.min_value is not None) and (self.has_fallen is not None) else ''
+                (f', has_fallen={self.has_fallen}' if self.has_fallen is not None else '') + \
+                (f', min_value={self.min_value})' if (self.min_value is not None) and (self.has_fallen is not None) else ')')
 
     __str__ = __repr__
+
+    def is_valid(self):
+        """
+        Returns True if the data stored in the Transform object is valid, False otherwise.
+        This checks:
+        a) does applying the given transformation to the start form result in the end form.
+        b) does the number of steps match the number of steps it takes to reach the end form.
+        c) does the form fall below the starting form if it is supposed to.
+        """
+        if self.transform:
+            if self.transform(self.start) != self.end:
+                return False
+        if self.steps:
+            if self.steps != self.start.compute_fall().steps:
+                return False
+        if self.has_fallen:
+            if self.has_fallen != self.start.compute_fall().has_fallen:
+                return False
+        if self.min_value:
+            if self.min_value != self.start.compute_fall().min_value:
+                return False
 
 class Form():
     """
@@ -578,7 +609,11 @@ class Form():
 
     # repr
     def __repr__(self):
-        return f'Form({self.a}, {self.b})'
+        return f'Form({int(self.a) if self.a.is_integer() else self.a}, {int(self.b) if self.b.is_integer() else self.b})'
+
+    # hash
+    def __hash__(self):
+        return hash((self.a, self.b))
 
     # call
     def __call__(self, n:int|float|Number|'Form'):
@@ -657,7 +692,7 @@ class Form():
             step = form.step()
 
             if step is None:
-                return Transform(self, form, steps, False)
+                return Transform(self, form, transform, steps, False)
 
             form = step[0]
             transform = step[1](transform)
@@ -667,9 +702,9 @@ class Form():
             if comp[0]:
                 # the intersect must be strictly smaller than 1 for self to be bigger for every valid case (n > 0, n ∈ Z)
                 if comp[1] < 1:
-                    return Transform(self, form, steps, True)
+                    return Transform(self, form, transform, steps, True)
                 else:
-                    return Transform(self, form, steps, True, comp[1])
+                    return Transform(self, form, transform, steps, True, comp[1])
 
     def compute_full(self):
         """
@@ -694,23 +729,107 @@ class Form():
         """
         Splits self into `parts` parts and returns them in a tuple.
         """
-        pass # TODO
+        # an + b
+        # for parts = 2: (2a)n + b, (2a)n + (b + 1)
+        # for parts = 3: (3a)n + b, (3a)n + (b + 1), (3a)n + (b + 2)
+        # for parts = p: (pa)n + b, (pa)n + (b + 1), (pa)n + (b + 2), ..., (pa)n + (b + p - 1)
+        parts_list = []
+        for i in range(parts):
+            parts_list.append(Form(parts*self.a, self.b + i*self.a))
+
+        return tuple(parts_list)
+
+    @classmethod
+    def compute_set(cls, a:int, full:bool = False, filter_fallen:bool = False):
+        """
+        Computes all forms: an + b where b ranges from 0 to a - 1.
+        This runs compute_fall or compute_full on each and returns a list of the results.
+        if filter_fallen it True remove results that fall below their starting form.
+        """
+        results = []
+        for b in range(a):
+            if full:
+                new = Form(a, b).compute_full()
+            else:
+                new = Form(a, b).compute_fall()
+
+            if (not filter_fallen) or (not new.has_fallen):
+                results.append(new)
+
+        return results
+
+    def tree(self, split:int, depth:int):
+        """
+        Recursivly calls compute_fall on the form splitting it by `split` whenever it's parity becomes unknown.
+        Stop after depth levels of recursion.
+        """
+        if depth == 0:
+            return self
+
+        result = self.compute_fall()
+        if result.has_fallen:
+            return result
+        else:
+            # TODO: Consider splitting the form after the precomputation. i.e. `replacing self.split_form(...)` with `result.end.split_form(...)`
+            return tuple([form.tree(split, depth - 1) for form in self.split_form(split)])
+
+
+
 
 # Now that the Form class is defined we can define the BASIS attribute.
 Form.BASIS = Form(1, 0)
 
 
 
-print(Transform(Form(1, 0), Form(0.5, 0.5), Form(0.5, 0.5), 1).__repr__())
-exit()
+for i in enumerate(Form.compute_set(2048, filter_fallen=True), 1):
+    print(f"{i[0]})  {i[1]}")
 
+# print(Form(1, 0).tree(2, 5))
 
-# The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.
-test = Form(4, 1)
-x= test.compute_fall()
-print(x) # (True, Form(3, 1), 3)
-print(type(x))
+# # The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.
+# test = Form(4, 1)
+# print(test.compute_fall()) # Transform(Form(4.0, 1.0), Form(3.0, 1.0), transform=Form(0.75, 1.0), steps=3, has_fallen=True)
 
-# The below code demonstrates that every number of the form 4n + 3 will go to to 9n + 8 in 4 steps at which point it's parity becomes unknown.
-test = Form(4, 3)
-print(test.compute_fall()) # (False, Form(9, 8), 4)
+# # The below code demonstrates that every number of the form 4n + 3 will go to to 9n + 8 in 4 steps at which point it's parity becomes unknown.
+# test = Form(4, 3)
+# print(test.compute_fall()) # Transform(Form(4.0, 3.0), Form(9.0, 8.0), transform=Form(2.25, 2.5), steps=4, has_fallen=False)
+
+# # The below code shows the form 1n + 0 being split into two parts (even and odd numbers), 2n + 0 and 2n + 1.
+# test = Form(1, 0)
+# print(test.split_form(2)) # (Form(2, 0), Form(2, 1))
+# print(test.split_form(3)) # (Form(3, 0), Form(3, 1), Form(3, 2))
+
+# test = Form(4, 3)
+# print(test.split_form(2)) # (Form(8, 3), Form(8, 7))
+# print(test.split_form(3)) # (Form(12, 3), Form(12, 7), Form(12, 11))
+
+# for i in enumerate(Form.compute_set(512, filter_fallen=True), 1):
+#     print(f"{i[0]})  {i[1]}")
+
+# for i in range(1, 30):
+#     print(f"{2**i}\t\t{len(Form.compute_set(2**i, filter_fallen=True))}\t\t{len(Form.compute_set(2**i, filter_fallen=True))/2**i}")
+# # 2               1               0.5
+# # 4               1               0.25 # pair
+# # 8               2               0.25
+# # 16              3               0.1875
+# # 32              4               0.125 # pair
+# # 64              8               0.125
+# # 128             13              0.1015625
+# # 256             19              0.07421875 # pair
+# # 512             38              0.07421875
+# # 1024            64              0.0625 # pair
+# # 2048            128             0.0625
+# # 4096            226             0.05517578125
+# # 8192            367             0.0447998046875 # pair
+# # 16384           734             0.0447998046875
+# # 32768           1295            0.039520263671875
+# # 65536           2114            0.032257080078125 # pair
+# # 131072          4228            0.032257080078125
+# # 262144          7495            0.028591156005859375 # pair
+# # 524288          14990           0.028591156005859375
+# # 1048576         27328           0.02606201171875
+
+# for i in range(1, 300):
+#     print(f"{i}\t\t{len(Form.compute_set(i, filter_fallen=True))}\t\t{len(Form.compute_set(i, filter_fallen=True))/i}")
+# compute_set for odd coefficients always yields a ratio of 1. This means that every form with an odd coefficient will have no eliminations.
+# This is PROBABLY because the parity of the form is always unknown and so the process stops straight away.
