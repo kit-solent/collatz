@@ -5,7 +5,7 @@ class Number():
     def __init__(self, value:int|str|bytes|'Number'):
         try:
             value = int(value)
-        except ValueError:
+        except (ValueError, TypeError):
             raise ValueError(f'Failed to convert value: {value} of type: {type(value)} to type int.')
 
         if value < 1:
@@ -97,37 +97,37 @@ class Number():
     #region in-place operators
     # +=
     def __iadd__(self, other):
-        self = self + other
+        self.value += Number(other).value
         return self
 
     # -=
     def __isub__(self, other):
-        self = self - other
+        self.value -= Number(other).value
         return self
 
     # *=
     def __imul__(self, other):
-        self = self * other
+        self.value *= Number(other).value
         return self
 
     # /=
     def __itruediv__(self, other):
-        self = self / other
+        self.value /= Number(other).value
         return self
 
     # //=
     def __ifloordiv__(self, other):
-        self = self // other
+        self.value //= Number(other).value
         return self
 
     # %=
     def __imod__(self, other):
-        self = self % other
+        self.value %= Number(other).value
         return self
 
     # **=
     def __ipow__(self, other):
-        self = self ** other
+        self.value **= Number(other).value
         return self
     #endregion
     #region bitwise operators
@@ -180,27 +180,27 @@ class Number():
     #region in-place bitwise operators
     # &=
     def __iand__(self, other):
-        self = self & other
+        self.value &= Number(other).value
         return self
 
     # |=
     def __ior__(self, other):
-        self = self | other
+        self.value |= Number(other).value
         return self
 
     # ^=
     def __ixor__(self, other):
-        self = self ^ other
+        self.value ^= Number(other).value
         return self
 
     # <<=
     def __ilshift__(self, other):
-        self = self << other
+        self.value <<= Number(other).value
         return self
 
     # >>=
     def __irshift__(self, other):
-        self = self >> other
+        self.value >>= Number(other).value
         return self
     #endregion
     #region unary operators
@@ -210,11 +210,11 @@ class Number():
 
     # -
     def __neg__(self):
-        raise ValueError('Type Number does not support negative values.')
+        raise ValueError('Type Number does not support negative values. Use `-int(num)` to get the negative value as an `int` type.')
 
     # ~
     def __invert__(self):
-        raise ValueError('Type Number does not support negative values. The ~ operator is therfore not supported.')
+        raise ValueError('Type Number does not support negative values. The ~ operator is therefore not supported. Use `~int(num)` to get the bitwise inverse as an `int` type.')
     #endregion
     #region comparison operators
     # ==
@@ -272,7 +272,8 @@ class Number():
 
     # bytes
     def __bytes__(self):
-        return bytes(self.value)
+        # use (bit_length + 7) // 8 to convert from bits to bytes and round up.
+        return self.value.to_bytes((self.value.bit_length() + 7) // 8, byteorder='big')
 
     # repr
     def __repr__(self):
@@ -314,7 +315,7 @@ class Number():
         """
         Returns True if the number is odd, False otherwise.
         """
-        return not self.is_even()
+        return self % 2 == 1
 
     def step(self, shortcut:bool = False):
         """
@@ -334,6 +335,8 @@ class Number():
         Returns the one or two numbers from which this number can be reached in the Collatz sequence.
         if shortcut is True, the shortcut form of the conjecture is used.
         """
+        # Start with twice our number. This value would havlve to
+        # reach our number regardless of if the shortcut form is used or not.
         numbers = [self * 2]
 
         if shortcut:
@@ -445,6 +448,10 @@ class Form():
     # We can't deffine it yet but we can type it.
     # BASIS = Form(1, 0)
     BASIS: 'Form'
+    # ODD = Form(2, 1)
+    ODD: 'Form'
+    # EVEN = Form(2, 0)
+    EVEN: 'Form'
 
     def __init__(self, a:int|float|str|bytes|'Number', b:int|float|str|bytes|'Number'):
         """
@@ -635,6 +642,9 @@ class Form():
         -1 = odd
         0 = unknown
         1 = even
+        This can be used in boolean expressions to check if the parity is known as
+        bool(1) == bool(-1) == True and bool(0) == False. bool(self.parity()) will
+        return True if the parity is known and False otherwise.
         """
         if self.a % 2 == 0:
             return 1 if (self.b % 2 == 0) else -1
@@ -716,7 +726,7 @@ class Form():
         steps = 0
         transform = Form.BASIS
 
-        while form.parity():
+        while form.parity(): # True for known parity (-1 or 1), False for unknown parity (0).
             # will never be None due to the parity check.
             step = form.step()
             transform = step[1](transform)
@@ -742,9 +752,9 @@ class Form():
     @classmethod
     def compute_set(cls, a:int, full:bool = False, filter_fallen:bool = False):
         """
-        Computes all forms: an + b where b ranges from 0 to a - 1.
+        Computes all forms: `a`n + b where b ranges from 0 to `a` - 1.
         This runs compute_fall or compute_full on each and returns a list of the results.
-        if filter_fallen it True remove results that fall below their starting form.
+        if filter_fallen is True remove results that fall below their starting form.
         """
         results = []
         for b in range(a):
@@ -753,7 +763,7 @@ class Form():
             else:
                 new = Form(a, b).compute_fall()
 
-            if (not filter_fallen) or (not new.has_fallen):
+            if not (filter_fallen and new.has_fallen):
                 results.append(new)
 
         return results
@@ -761,7 +771,7 @@ class Form():
     def tree(self, split:int, depth:int):
         """
         Recursivly calls compute_fall on the form splitting it by `split` whenever it's parity becomes unknown.
-        Stop after depth levels of recursion.
+        Stop after `depth` levels of recursion.
         """
         if depth == 0:
             return self
@@ -770,19 +780,28 @@ class Form():
         if result.has_fallen:
             return result
         else:
-            # TODO: Consider splitting the form after the precomputation. i.e. `replacing self.split_form(...)` with `result.end.split_form(...)`
+            # TODO: Consider splitting the form after the precomputation. i.e. replacing `self.split_form(split)` with `result.end.split_form(split)`
+            # this would still cover all cases and would be more efficient but is also a little less intuitive.
             return tuple([form.tree(split, depth - 1) for form in self.split_form(split)])
 
-
-
+    def inverse(self):
+        """
+        Return the inverse form. This models the form as a linear equation
+        in terms of y then solves for x and returns the resulting form
+        y = ax + b  =>  x = (y - b) / a = (1/a)y - b/a
+        """
+        return Form(1/self.a, -self.b/self.a)
 
 # Now that the Form class is defined we can define the BASIS attribute.
 Form.BASIS = Form(1, 0)
+Form.ODD = Form(2, 1)
+Form.EVEN = Form(2, 0)
 
-
-
-for i in enumerate(Form.compute_set(2048, filter_fallen=True), 1):
-    print(f"{i[0]})  {i[1]}")
+# this shows that for every chunk of numbers of the form 256n + k where k ranges from 0 to 255
+# there are only 19 values that don't fall below their starting value and, when these values are
+# precomputed the a values of the resulting forms an + b are all powers of 3 (3^6, 3^7, and in just the last case 3^8)
+for i, result in enumerate(Form.compute_set(256, filter_fallen=True), 1):
+    print(f"{math.log(result.end.a, 3)}")
 
 # print(Form(1, 0).tree(2, 5))
 
@@ -802,9 +821,6 @@ for i in enumerate(Form.compute_set(2048, filter_fallen=True), 1):
 # test = Form(4, 3)
 # print(test.split_form(2)) # (Form(8, 3), Form(8, 7))
 # print(test.split_form(3)) # (Form(12, 3), Form(12, 7), Form(12, 11))
-
-# for i in enumerate(Form.compute_set(512, filter_fallen=True), 1):
-#     print(f"{i[0]})  {i[1]}")
 
 # for i in range(1, 30):
 #     print(f"{2**i}\t\t{len(Form.compute_set(2**i, filter_fallen=True))}\t\t{len(Form.compute_set(2**i, filter_fallen=True))/2**i}")
