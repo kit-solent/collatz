@@ -1,15 +1,38 @@
 // NOTE: The limit for the `unsigned __int128` type is: 340282366920938463463374607431768211455
 // NOTE: The Collatz Conjecture lower limit so far is : 295147905179352825856
-// NOTE: While overflow could occour when testing higher values the unsigned __int128 limit is probably high enough.
+// NOTE: While overflow could occur when testing higher values the unsigned __int128 limit is probably high enough.
 
 #include <stdio.h>
 #include <omp.h>
+
+void p128(unsigned __int128 value) {
+    unsigned long long high = value >> 64;
+    unsigned long long low = (unsigned long long)value;
+    if (high == 0) {
+        printf("%llu\n", low);
+    } else {
+        printf("%llu%018llu\n", high, low);
+    }
+}
+
+inline unsigned __int128 ctz_128(unsigned __int128 num) {
+    // extract the lower 64 bits by casting directly.
+    unsigned long long lo = (unsigned long long)num;
+    // use a right shift to extract the upper 64 bits.
+    unsigned long long hi = (unsigned long long)(num >> 64);
+
+    if (lo == 0) return __builtin_ctzll(hi) + 64;
+
+    return __builtin_ctzll(lo);
+}
 
 // inline may not be needed here.
 inline void test(unsigned __int128 num) {
     // make a copy for comparison
     unsigned __int128 init_num = num;
-
+    printf("Testing: ");
+    p128(num);
+    printf("\n");
     // NOTE: initially num will be of the form 4n + 3
 
     // the `do {...} while (condition);` syntax removes the initial condition check which is always true in this case.
@@ -17,10 +40,8 @@ inline void test(unsigned __int128 num) {
         // given that num is odd we should start with 3n + 1
         num = 3 * num + 1;
 
-        // and then divide until odd.
-        // NOTE: undefined reference to `__builtin_ctzg' dispite:
-        // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005fctzg
-        num >>= __builtin_ctz(num); //TODO: This doesn't work for unsigned __int128 types. Make a custom implimentation.
+        // and then divide until odd using a right shift by the number of trailing 0s.
+        num >>= ctz_128(num);
 
         // after this point num should be compared with init_num
 
@@ -30,20 +51,21 @@ inline void test(unsigned __int128 num) {
 }
 
 int main() {
-    // openmp uses all available threads by default.
+    // OpenMP uses all available threads by default.
+    // The number of threads can be controlled using the OMP_NUM_THREADS environment variable.
     printf("Computing on %d threads...\n", omp_get_max_threads());
 
     // 10^11, gcc will precompute the division.
     // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
     // the rest of the expression will be automatically promoted to __int128.
-    const unsigned __int128 limit = (unsigned __int128)10000000000 * 10 / 256;
+    const unsigned __int128 limit = (unsigned __int128)100 * 1;// / 256;
     // NOTE: the limit is divided by 256 as we are incrementing our loop by 1 rather than 256.
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
 
     // NOTE: `static` could be replaced with `dynamic` to balance the workload
     // across the threads better but at the cost of scheduling overhead.
-    #pragma omp parallel for schedule(static, 512)
+    #pragma omp parallel for schedule(static)
     for (unsigned __int128 i = 0; i < limit; i++) {
         // see simple.py for the algorithm behind these test values.
         // NOTE: (i << 8) has been replaced with i as we are incrementing our loop by 1 rather than 256.
