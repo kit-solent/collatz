@@ -18,7 +18,9 @@ inline void test(unsigned __int128 num) {
         num = 3 * num + 1;
 
         // and then divide until odd.
-        num >>= __builtin_ctz(num);
+        // NOTE: undefined reference to `__builtin_ctzg' dispite:
+        // https://gcc.gnu.org/onlinedocs/gcc/Other-Builtins.html#index-_005f_005fbuiltin_005fctzg
+        num >>= __builtin_ctz(num); //TODO: This doesn't work for unsigned __int128 types. Make a custom implimentation.
 
         // after this point num should be compared with init_num
 
