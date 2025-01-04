@@ -797,11 +797,18 @@ Form.BASIS = Form(1, 0)
 Form.ODD = Form(2, 1)
 Form.EVEN = Form(2, 0)
 
+
+
+##NOTE: Interesting pattern #1
 # this shows that for every chunk of numbers of the form 256n + k where k ranges from 0 to 255
 # there are only 19 values that don't fall below their starting value and, when these values are
 # precomputed the a values of the resulting forms an + b are all powers of 3 (3^6, 3^7, and in just the last case 3^8)
 for i, result in enumerate(Form.compute_set(256, filter_fallen=True), 1):
     print(f"{math.log(result.end.a, 3)}")
+
+
+
+
 
 # print(Form(1, 0).tree(2, 5))
 

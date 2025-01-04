@@ -1,5 +1,5 @@
 // NOTE: The limit for the `unsigned __int128` type is: 340282366920938463463374607431768211455
-// NOTE: The Collatz Conjecture lower limit so far is : 295000000000000000000
+// NOTE: The Collatz Conjecture lower limit so far is : 295147905179352825856
 // NOTE: While overflow could occour when testing higher values the unsigned __int128 limit is probably high enough.
 
 #include <stdio.h>
@@ -15,9 +15,6 @@ inline void test(unsigned __int128 num) {
     // the `do {...} while (condition);` syntax removes the initial condition check which is always true in this case.
     do {
         // given that num is odd we should start with 3n + 1
-        // NOTE: this step could be performed in binary with: `num = ((num << 1) | 1) + num;`
-        // but due to compiler optimisations would probably have no effect and could even be
-        // slower due to modern CPU multiplication methods.
         num = 3 * num + 1;
 
         // and then divide until odd.
@@ -49,14 +46,9 @@ int main() {
         // see simple.py for the algorithm behind these test values.
         // NOTE: (i << 8) has been replaced with i as we are incrementing our loop by 1 rather than 256.
 
-        // NOTE: interesting fact:
-        // 729  = 3^6
-        // 2187 = 3^7
-        // 6561 = 3^8
         unsigned __int128 _2187 = 2187 * i;
         unsigned __int128 _729 = 729 * i;
 
-        // only these 19 values in every 256 need testing.
         test(_2187 + 242);
         test(_729 + 91);
         test(_729 + 137);
