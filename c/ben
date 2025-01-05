@@ -30,7 +30,7 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-gcc -O3 -fopenmp -flto -ftree-vectorize -m64 -march=native main.c -o main
+gcc -O3 -fopenmp -flto -ftree-vectorize -m64 -march=native main2.c -o main2
 if [ $? -ne 0 ]; then
     echo "Failed to compile main2.c"
     exit 1

@@ -809,7 +809,6 @@ for i, result in enumerate(Form.compute_set(256, filter_fallen=True), 1):
 
 
 
-
 # print(Form(1, 0).tree(2, 5))
 
 # # The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.

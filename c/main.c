@@ -5,17 +5,7 @@
 #include <stdio.h>
 #include <omp.h>
 
-void p128(unsigned __int128 value) {
-    unsigned long long high = value >> 64;
-    unsigned long long low = (unsigned long long)value;
-    if (high == 0) {
-        printf("%llu\n", low);
-    } else {
-        printf("%llu%018llu\n", high, low);
-    }
-}
-
-inline unsigned __int128 ctz_128(unsigned __int128 num) {
+inline int ctz_128(unsigned __int128 num) {
     // extract the lower 64 bits by casting directly.
     unsigned long long lo = (unsigned long long)num;
     // use a right shift to extract the upper 64 bits.
@@ -30,13 +20,12 @@ inline unsigned __int128 ctz_128(unsigned __int128 num) {
 inline void test(unsigned __int128 num) {
     // make a copy for comparison
     unsigned __int128 init_num = num;
-    printf("Testing: ");
-    p128(num);
-    printf("\n");
-    // NOTE: initially num will be of the form 4n + 3
 
-    // the `do {...} while (condition);` syntax removes the initial condition check which is always true in this case.
-    do {
+    // NOTE: Due to precomputation, the initial form and parity of the numbers are unknown.
+
+    num >>= ctz_128(num); // ensure that num starts odd.
+
+    while (num >= init_num) {
         // given that num is odd we should start with 3n + 1
         num = 3 * num + 1;
 
@@ -47,7 +36,7 @@ inline void test(unsigned __int128 num) {
 
         // NOTE: unrolling more iterations could lead to the number
         // climbing again and taking longer to fall so don't do that.
-    } while (num >= init_num);
+    }
 }
 
 int main() {
@@ -58,7 +47,7 @@ int main() {
     // 10^11, gcc will precompute the division.
     // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
     // the rest of the expression will be automatically promoted to __int128.
-    const unsigned __int128 limit = (unsigned __int128)100 * 1;// / 256;
+    const unsigned __int128 limit = (unsigned __int128)10000000000 * 10 / 256;
     // NOTE: the limit is divided by 256 as we are incrementing our loop by 1 rather than 256.
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
