@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <omp.h>
 
-inline int ctz_128(unsigned __int128 num) {
+int ctz_128(unsigned __int128 num) {
     // extract the lower 64 bits by casting directly.
     unsigned long long lo = (unsigned long long)num;
     // use a right shift to extract the upper 64 bits.
@@ -16,8 +16,7 @@ inline int ctz_128(unsigned __int128 num) {
     return __builtin_ctzll(lo);
 }
 
-// inline may not be needed here.
-inline void test(unsigned __int128 num) {
+void test(unsigned __int128 num) {
     // make a copy for comparison
     unsigned __int128 init_num = num;
 
@@ -52,8 +51,6 @@ int main() {
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
 
-    // NOTE: `static` could be replaced with `dynamic` to balance the workload
-    // across the threads better but at the cost of scheduling overhead.
     #pragma omp parallel for schedule(static)
     for (unsigned __int128 i = 0; i < limit; i++) {
         // see simple.py for the algorithm behind these test values.
@@ -86,15 +83,12 @@ int main() {
     return 0;
 }
 
-// gcc -O3 -fopenmp -flto -ftree-vectorize -m64 -march=native main.c -o main
+// gcc -O3 -fopenmp -m64 -funroll-loops -march=native main.c -o main
 
-// "#" = not included.
 // -O3 is the flag for the highest optimisation level.
-//# -static means to bundle the required libraries into the executable.
 // -fopenmp is the flag for OpenMP support.
-// -flto is the flag for link time optimisation.
-// -ftree-vectorize is the flag for loop vectorisation.
 // -m64 is the flag to compile for 64 bit.
+// -funroll-loops is the flag to allow the compiler to unroll loops.
 
 // -march=native is the flag to compile for the specific CPU. Remove this for a more general executable.
 
