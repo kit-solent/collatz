@@ -6,8 +6,7 @@ def generate_unique_name(base:str = "file"):
         counter += 1
     return base+hex(counter)[2:]
 
-
-def benchmark(file:pathlib.Path, compile_flags:list, runs:int=10):
+def benchmark(file:pathlib.Path, compile_flags:list, runs:int=4):
     """
     Compiles, runs, and returns the excecution time of the given C file.
     Compilation is done using gcc with the provided flags.
