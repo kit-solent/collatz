@@ -396,7 +396,8 @@ class Transform():
         end: The ending form.
         steps: The number of steps it took to reach the ending form.
         has_fallen: True if the form has fallen below the starting form, False if it has not, None if it is unknown.
-        min_value: The minimum value at which the form has fallen below the starting form.
+        min_value: The minimum value at which the form has fallen below the starting form. If None then the fall is unconditional
+        and occurs for all values of n > 0.
         """
         assert isinstance(start, Form), "start must be of type Form."
         assert isinstance(end, Form), "end must be of type Form."
@@ -758,7 +759,7 @@ class Form():
         return tuple(parts_list)
 
     @classmethod
-    def compute_set(cls, a:int, full:bool = False, filter_fallen:bool = False):
+    def compute_set(cls, a:int, full:bool = False, filter_fallen:bool = False) -> list[Transform]:
         """
         Computes all forms: `a`n + b where b ranges from 0 to `a` - 1.
         This runs compute_fall or compute_full on each and returns a list of the results.
@@ -804,64 +805,3 @@ class Form():
 Form.BASIS = Form(1, 0)
 Form.ODD = Form(2, 1)
 Form.EVEN = Form(2, 0)
-
-
-
-if __name__ == "__main__":
-
-    ##NOTE: Interesting pattern #1
-    # this shows that for every chunk of numbers of the form 256n + k where k ranges from 0 to 255
-    # there are only 19 values that don't fall below their starting value and, when these values are
-    # precomputed the a values of the resulting forms an + b are all powers of 3 (3^6, 3^7, and in just the last case 3^8)
-    for i, result in enumerate(Form.compute_set(256, filter_fallen=True), 1):
-        print(f"{math.log(result.end.a, 3)}")
-
-
-
-
-    # print(Form(1, 0).tree(2, 5))
-
-    # # The below code demonstrates that every number of the form 4n + 1 will fall to 3n + 1 in 3 steps.
-    # test = Form(4, 1)
-    # print(test.compute_fall()) # Transform(Form(4.0, 1.0), Form(3.0, 1.0), transform=Form(0.75, 1.0), steps=3, has_fallen=True)
-
-    # # The below code demonstrates that every number of the form 4n + 3 will go to to 9n + 8 in 4 steps at which point it's parity becomes unknown.
-    # test = Form(4, 3)
-    # print(test.compute_fall()) # Transform(Form(4.0, 3.0), Form(9.0, 8.0), transform=Form(2.25, 2.5), steps=4, has_fallen=False)
-
-    # # The below code shows the form 1n + 0 being split into two parts (even and odd numbers), 2n + 0 and 2n + 1.
-    # test = Form(1, 0)
-    # print(test.split_form(2)) # (Form(2, 0), Form(2, 1))
-    # print(test.split_form(3)) # (Form(3, 0), Form(3, 1), Form(3, 2))
-
-    # test = Form(4, 3)
-    # print(test.split_form(2)) # (Form(8, 3), Form(8, 7))
-    # print(test.split_form(3)) # (Form(12, 3), Form(12, 7), Form(12, 11))
-
-    # for i in range(1, 30):
-    #     print(f"{2**i}\t\t{len(Form.compute_set(2**i, filter_fallen=True))}\t\t{len(Form.compute_set(2**i, filter_fallen=True))/2**i}")
-    # # 2               1               0.5
-    # # 4               1               0.25 # pair
-    # # 8               2               0.25
-    # # 16              3               0.1875
-    # # 32              4               0.125 # pair
-    # # 64              8               0.125
-    # # 128             13              0.1015625
-    # # 256             19              0.07421875 # pair
-    # # 512             38              0.07421875
-    # # 1024            64              0.0625 # pair
-    # # 2048            128             0.0625
-    # # 4096            226             0.05517578125
-    # # 8192            367             0.0447998046875 # pair
-    # # 16384           734             0.0447998046875
-    # # 32768           1295            0.039520263671875
-    # # 65536           2114            0.032257080078125 # pair
-    # # 131072          4228            0.032257080078125
-    # # 262144          7495            0.028591156005859375 # pair
-    # # 524288          14990           0.028591156005859375
-    # # 1048576         27328           0.02606201171875
-
-    # for i in range(1, 300):
-    #     print(f"{i}\t\t{len(Form.compute_set(i, filter_fallen=True))}\t\t{len(Form.compute_set(i, filter_fallen=True))/i}")
-    # compute_set for odd coefficients always yields a ratio of 1. This means that every form with an odd coefficient will have no eliminations.
-    # This is PROBABLY because the parity of the form is always unknown and so the process stops straight away.

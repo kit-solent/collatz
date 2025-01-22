@@ -56,8 +56,7 @@ int main() {
 
     #pragma omp parallel for schedule(static)
     for (unsigned __int128 i = 0; i < limit; i++) {
-        // see simple.py for the algorithm behind these test values.
-        // NOTE: (i << 8) has been replaced with i as we are incrementing our loop by 1 rather than 256.
+        // see Calculation 1 in main/calculations.py for the explination behind the following tests.
 
         unsigned __int128 _2187 = 2187 * i;
         unsigned __int128 _729 = 729 * i;
