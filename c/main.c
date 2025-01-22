@@ -49,7 +49,7 @@ int main() {
     // 10^11, gcc will precompute the division.
     // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
     // the rest of the expression will be automatically promoted to __int128.
-    const unsigned __int128 limit = (unsigned __int128)10000000000 * 1 / 256;
+    const unsigned __int128 limit = (unsigned __int128)10000000000 * 10 / 256;
     // NOTE: the limit is divided by 256 as we are incrementing our loop by 1 rather than 256.
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
