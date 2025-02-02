@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <omp.h>
 
+void print_uint128(unsigned __int128 num) {
+    printf("%llu%llu\n", (unsigned long long)(num >> 64), (unsigned long long)num);
+}
+
 // NOTE: using this function seems slow but the alternative
 // is to perform a parity check and only ever divide by 2.
 // this is far slower.
@@ -42,45 +46,52 @@ void test(unsigned __int128 num) {
 }
 
 int main() {
-    // OpenMP uses all available threads by default.
-    // The number of threads can be controlled using the OMP_NUM_THREADS environment variable.
-    printf("Computing on %d threads...\n", omp_get_max_threads());
+    // These values are scaled up by 10^10
+    const unsigned __int128 lower = 00;
+    const unsigned __int128 upper = 10;
 
-    // 10^11, gcc will precompute the division.
     // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
     // the rest of the expression will be automatically promoted to __int128.
-    const unsigned __int128 limit = (unsigned __int128)10000000000 * 10 / 256;
-    // NOTE: the limit is divided by 256 as we are incrementing our loop by 1 rather than 256.
+    const unsigned __int128 _lower = (unsigned __int128)10000000000 * lower / 256;
+    const unsigned __int128 _upper = (unsigned __int128)10000000000 * upper / 256;
+
+    // OpenMP uses all available threads by default.
+    // The number of threads can be controlled using the OMP_NUM_THREADS environment variable.
+    printf("Computing...");
+
+    // NOTE: the limits are divided by 256 as we are incrementing our loop by 1 rather than 256.
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
 
-    #pragma omp parallel for schedule(static)
-    for (unsigned __int128 i = 0; i < limit; i++) {
+    #pragma omp parallel for schedule(static) // NOTE: <= must be used to include the last chunk.
+    for (unsigned __int128 i = _lower; i <= _upper; i++) {
         // see Calculation 1 in main/calculations.py for the explination behind the following tests.
 
         unsigned __int128 _2187 = 2187 * i;
         unsigned __int128 _729 = 729 * i;
 
         test(_2187 + 242);
-        test(_729 + 91);
-        test(_729 + 137);
-        test(_729 + 182);
-        test(_729 + 206);
-        test(_729 + 263);
+        test(_729  + 91);
+        test(_729  + 137);
+        test(_729  + 182);
+        test(_729  + 206);
+        test(_729  + 263);
         test(_2187 + 890);
-        test(_729 + 319);
+        test(_729  + 319);
         test(_2187 + 1093);
-        test(_729 + 445);
+        test(_729  + 445);
         test(_2187 + 1367);
-        test(_729 + 479);
+        test(_729  + 479);
         test(_2187 + 1640);
-        test(_729 + 593);
-        test(_729 + 638);
-        test(_729 + 661);
+        test(_729  + 593);
+        test(_729  + 638);
+        test(_729  + 661);
         test(_2187 + 2051);
-        test(_729 + 719);
+        test(_729  + 719);
         test(6561 * i + 6560);
     }
+
+    printf(" Done...\n");
 
     return 0;
 }

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import copy, math
+import copy, math, pathlib
 
 class Number():
     def __init__(self, value:int|str|bytes|'Number'):
@@ -801,7 +801,23 @@ class Form():
         """
         return Form(1/self.a, -self.b/self.a)
 
+
+template_path = pathlib.Path(__file__).parent / "template.c"
+def generate_program(start:int, stop:int, template:pathlib.Path = template_path, start_marker:str = "/* START */", end_marker:str = "/* END */"):
+    """
+    Generates a program using the provided template C code
+    """
+    with open(template, 'r') as file:
+        template = file.read()
+
+    program = template.replace(start_marker, str(start)).replace(end_marker, str(stop))
+
+    return program
+
 # Now that the Form class is defined we can define the BASIS attribute.
 Form.BASIS = Form(1, 0)
 Form.ODD = Form(2, 1)
 Form.EVEN = Form(2, 0)
+
+# some usefull links:
+# https://sweet.ua.pt/tos/3x+1.html

@@ -2,7 +2,7 @@ import main
 
 print("-- Calculation 1: Forms that don't fall and their precomputations. --")
 # obtain a list of all forms 256n + k that don't fall below their starting value where k ranges from 0 to 255.
-# this covers all natural numbers that don't fall.
+# together, these forms cover all natural numbers that don't fall.
 results = main.Form.compute_set(256, filter_fallen=True)
 for count, result in enumerate(results, 1):
     print(f"{str(count).rjust(3)}) {result.start} \t({result.steps})->\t {result.end}")
