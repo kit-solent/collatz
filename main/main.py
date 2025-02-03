@@ -803,7 +803,7 @@ class Form():
 
 
 template_path = pathlib.Path(__file__).parent / "template.c"
-def generate_program(start:int, stop:int, template:pathlib.Path = template_path, start_marker:str = "/* START */", end_marker:str = "/* END */"):
+def generate_program(start:int, stop:int, template:pathlib.Path = template_path, start_marker:str = "START", end_marker:str = "END"):
     """
     Generates a program using the provided template C code
     """
@@ -811,6 +811,8 @@ def generate_program(start:int, stop:int, template:pathlib.Path = template_path,
         template = file.read()
 
     program = template.replace(start_marker, str(start)).replace(end_marker, str(stop))
+
+    # TODO: compile it.
 
     return program
 
