@@ -44,7 +44,7 @@ void test(unsigned __int128 num) {
 int main() {
     // These values are scaled up by 10^10
     const unsigned __int128 lower = 000;
-    const unsigned __int128 upper = 100;
+    const unsigned __int128 upper = 100; // 6 minutes 15 seconds for this.
 
     // the first chunk ((unsigned __int128)10000000000 = 10^10) is the only one that needs the type cast.
     // the rest of the expression will be automatically promoted to __int128.
