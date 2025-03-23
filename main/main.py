@@ -1,388 +1,6 @@
 from __future__ import annotations
 import copy, math, pathlib
 
-class Number():
-    def __init__(self, value:int|str|bytes|'Number'):
-        try:
-            value = int(value)
-        except (ValueError, TypeError):
-            raise ValueError(f'Failed to convert value: {value} of type: {type(value)} to type int.')
-
-        if value < 1:
-            raise ValueError('Value must be greater than 0.')
-
-        self.value = value
-
-    #region operators
-    # +
-    def __add__(self, other):
-        other = Number(other)
-
-        # no validation required.
-
-        return Number(self.value + other.value)
-
-    # -
-    def __sub__(self, other):
-        other = Number(other)
-
-        if self.value < other.value:
-            raise ValueError('The result of the subtraction is less than 0.')
-
-        return Number(self.value - other.value)
-
-    # *
-    def __mul__(self, other):
-        other = Number(other)
-
-        # no validation required.
-
-        return Number(self.value * other.value)
-
-    # /
-    def __truediv__(self, other):
-        other = Number(other)
-
-        if self.value % other.value != 0:
-            raise ValueError('The result of the division is not an integer.')
-
-        return Number(self.value / other.value)
-
-    # //
-    def __floordiv__(self, other):
-        other = Number(other)
-
-        # no validation required.
-
-        return Number(self.value // other.value)
-
-    # %
-    def __mod__(self, other):
-        other = Number(other)
-
-        # no validation required.
-
-        return Number(self.value % other.value)
-
-    # **
-    def __pow__(self, other):
-        other = Number(other)
-
-        # no validation required.
-
-        return Number(self.value ** other.value)
-    #endregion
-    #region reverse operators
-    # +
-    __radd__ = lambda self, other: self + other
-
-    # -
-    __rsub__ = lambda self, other: self - other
-
-    # *
-    __rmul__ = lambda self, other: self * other
-
-    # /
-    __rtruediv__ = lambda self, other: self / other
-
-    # //
-    __rfloordiv__ = lambda self, other: self // other
-
-    # %
-    __rmod__ = lambda self, other: self % other
-
-    # **
-    __rpow__ = lambda self, other: self ** other
-    #endregion
-    #region in-place operators
-    # +=
-    def __iadd__(self, other):
-        self.value += Number(other).value
-        return self
-
-    # -=
-    def __isub__(self, other):
-        self.value -= Number(other).value
-        return self
-
-    # *=
-    def __imul__(self, other):
-        self.value *= Number(other).value
-        return self
-
-    # /=
-    def __itruediv__(self, other):
-        self.value /= Number(other).value
-        return self
-
-    # //=
-    def __ifloordiv__(self, other):
-        self.value //= Number(other).value
-        return self
-
-    # %=
-    def __imod__(self, other):
-        self.value %= Number(other).value
-        return self
-
-    # **=
-    def __ipow__(self, other):
-        self.value **= Number(other).value
-        return self
-    #endregion
-    #region bitwise operators
-    # &
-    def __and__(self, other):
-        other = Number(other)
-
-        return Number(self.value & other.value)
-
-    # |
-    def __or__(self, other):
-        other = Number(other)
-
-        return Number(self.value | other.value)
-
-    # ^
-    def __xor__(self, other):
-        other = Number(other)
-
-        return Number(self.value ^ other.value)
-
-    # <<
-    def __lshift__(self, other):
-        other = Number(other)
-
-        return Number(self.value << other.value)
-
-    # >>
-    def __rshift__(self, other):
-        other = Number(other)
-
-        return Number(self.value >> other.value)
-    #endregion
-    #region reverse bitwise operators
-    # &
-    __rand__ = lambda self, other: self & other
-
-    # |
-    __ror__ = lambda self, other: self | other
-
-    # ^
-    __rxor__ = lambda self, other: self ^ other
-
-    # <<
-    __rlshift__ = lambda self, other: self << other
-
-    # >>
-    __rrshift__ = lambda self, other: self >> other
-    #endregion
-    #region in-place bitwise operators
-    # &=
-    def __iand__(self, other):
-        self.value &= Number(other).value
-        return self
-
-    # |=
-    def __ior__(self, other):
-        self.value |= Number(other).value
-        return self
-
-    # ^=
-    def __ixor__(self, other):
-        self.value ^= Number(other).value
-        return self
-
-    # <<=
-    def __ilshift__(self, other):
-        self.value <<= Number(other).value
-        return self
-
-    # >>=
-    def __irshift__(self, other):
-        self.value >>= Number(other).value
-        return self
-    #endregion
-    #region unary operators
-    # +
-    def __pos__(self):
-        return self
-
-    # -
-    def __neg__(self):
-        raise ValueError('Type Number does not support negative values. Use `-int(num)` to get the negative value as an `int` type.')
-
-    # ~
-    def __invert__(self):
-        raise ValueError('Type Number does not support negative values. The ~ operator is therefore not supported. Use `~int(num)` to get the bitwise inverse as an `int` type.')
-    #endregion
-    #region comparison operators
-    # ==
-    def __eq__(self, other):
-        other = Number(other)
-
-        return self.value == other.value
-
-    # !=
-    def __ne__(self, other):
-        other = Number(other)
-
-        return self.value != other.value
-
-    # <
-    def __lt__(self, other):
-        other = Number(other)
-
-        return self.value < other.value
-
-    # <=
-    def __le__(self, other):
-        other = Number(other)
-
-        return self.value <= other.value
-
-    # >
-    def __gt__(self, other):
-        other = Number(other)
-
-        return self.value > other.value
-
-    # >=
-    def __ge__(self, other):
-        other = Number(other)
-
-        return self.value >= other.value
-    #endregion
-    #region conversion operators
-    # int
-    def __int__(self):
-        return self.value
-
-    # float
-    def __float__(self):
-        return float(self.value)
-
-    # complex
-    def __complex__(self):
-        return complex(self.value)
-
-    # str
-    def __str__(self):
-        return str(self.value)
-
-    # bytes
-    def __bytes__(self):
-        # use (bit_length + 7) // 8 to convert from bits to bytes and round up.
-        return self.value.to_bytes((self.value.bit_length() + 7) // 8, byteorder='big')
-
-    # repr
-    def __repr__(self):
-        return f'Number({self.value})'
-
-    # hash
-    def __hash__(self):
-        return hash(self.value)
-    #endregion
-    #region other operators
-    # abs
-    def __abs__(self):
-        # Number objects are already positive.
-        return Number(self.value)
-
-    # round
-    def __round__(self, n:int = 0):
-        # Number objects are already integers.
-        return Number(self.value)
-
-    # floor
-    def __floor__(self):
-        # Number objects are already integers.
-        return Number(self.value)
-
-    # ceil
-    def __ceil__(self):
-        # Number objects are already integers.
-        return Number(self.value)
-    #endregion
-
-    def is_even(self):
-        """
-        Returns True if the number is even, False otherwise.
-        """
-        return self % 2 == 0
-
-    def is_odd(self):
-        """
-        Returns True if the number is odd, False otherwise.
-        """
-        return self % 2 == 1
-
-    def step(self, shortcut:bool = False):
-        """
-        Returns the next number in the Collatz sequence.
-        if shortcut is True, the shortcut form of the conjecture is used.
-        """
-        if self.is_even():
-            return self / 2
-        else:
-            if shortcut:
-                return (3 * self + 1) / 2
-            else:
-                return 3 * self + 1
-
-    def reverse_step(self, shortcut:bool = False):
-        """
-        Returns the one or two numbers from which this number can be reached in the Collatz sequence.
-        if shortcut is True, the shortcut form of the conjecture is used.
-        """
-        # Start with twice our number. This value would havlve to
-        # reach our number regardless of if the shortcut form is used or not.
-        numbers = [self * 2]
-
-        if shortcut:
-            # y = (3x + 1) / 2
-            # x = (2y - 1) / 3
-            if (self * 2 - 1) % 3 == 0:
-                numbers.append((self * 2 - 1) / 3)
-        else:
-            # y = 3x + 1
-            # x = (y - 1) / 3
-            if (self - 1) % 3 == 0:
-                numbers.append((self - 1) / 3)
-
-        return numbers
-
-    def series(self, shortcut:bool = False):
-        """
-        Returns a list of numbers in the Collatz sequence.
-        if shortcut is True, the shortcut form of the conjecture is used.
-        """
-        sequence = [self]
-
-        while sequence[-1] != 1:
-            sequence.append(self.step(shortcut))
-
-        return sequence
-
-    def steps(self):
-        """
-        Returns the number of steps it takes to reach 1 in the Collatz sequence.
-        """
-        return len(self.series()) - 1
-
-    def steps_to_fall(self):
-        """
-        Returns the number of steps it takes to reach a number less than the starting number in the Collatz sequence.
-        """
-        count = 0
-        number = self
-
-        while number >= self:
-            number = number.step()
-            count += 1
-
-        return count
-
 class Transform():
     """
     Reperesents a transformation from one `Form` to another.
@@ -454,10 +72,9 @@ class Form():
     # EVEN = Form(2, 0)
     EVEN: 'Form'
 
-    def __init__(self, a:int|float|str|bytes|'Number', b:int|float|str|bytes|'Number'):
+    def __init__(self, a:int|float|str|bytes, b:int|float|str|bytes):
         """
-        NOTE: a and b are stored as integers rather than Number objects because
-        0 is a valid value for b and the Number class does not support 0.
+        doc string 123
         """
         try:
             a = float(a)
@@ -484,8 +101,8 @@ class Form():
 
     #region operators
     # +
-    def __add__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __add__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a, self.b + other)
         elif isinstance(other, Form):
             return Form(self.a + other.a, self.b + other.b)
@@ -493,8 +110,8 @@ class Form():
             raise ValueError(f'Cannot add Form with type: {type(other)}.')
 
     # -
-    def __sub__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __sub__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a, self.b - other)
         elif isinstance(other, Form):
             return Form(self.a - other.a, self.b - other.b)
@@ -502,8 +119,8 @@ class Form():
             raise ValueError(f'Cannot subtract Form with type: {type(other)}.')
 
     # *
-    def __mul__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __mul__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a * other, self.b * other)
         elif isinstance(other, Form):
             raise ValueError('Multiplying two forms gives a non linear result.')
@@ -511,8 +128,8 @@ class Form():
             raise ValueError(f'Cannot multiply Form with type: {type(other)}.')
 
     # /
-    def __truediv__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __truediv__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a / other, self.b / other)
         elif isinstance(other, Form):
             raise ValueError('Dividing two forms gives a non linear result.')
@@ -520,8 +137,8 @@ class Form():
             raise ValueError(f'Cannot divide Form with type: {type(other)}.')
 
     # //
-    def __floordiv__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __floordiv__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a // other, self.b // other)
         elif isinstance(other, Form):
             raise ValueError('Dividing two forms gives a non linear result.')
@@ -529,8 +146,8 @@ class Form():
             raise ValueError(f'Cannot divide Form with type: {type(other)}.')
 
     # %
-    def __mod__(self, other:int|float|Number|'Form'):
-        if isinstance(other, (int, Number)):
+    def __mod__(self, other:int|float|'Form'):
+        if isinstance(other, int):
             return Form(self.a % other, self.b % other)
         elif isinstance(other, Form):
             raise ValueError('Dividing two forms gives a non linear result.')
@@ -632,11 +249,11 @@ class Form():
         return hash((self.a, self.b))
 
     # call
-    def __call__(self, n:int|float|Number|'Form'):
+    def __call__(self, n:int|float|'Form'):
         """
         Returns the value of the form at n.
         """
-        if type(n) in (int, float, Number):
+        if type(n) in (int, float):
             n = float(n)
             return self.a * n + self.b
         elif isinstance(n, Form):

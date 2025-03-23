@@ -26,3 +26,6 @@ Manifest.toml
 # venv
 venv/
 venvw/
+
+# Python caching
+__pycache__/
