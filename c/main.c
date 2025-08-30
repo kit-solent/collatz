@@ -55,6 +55,10 @@ int main() {
     // The number of threads can be controlled using the OMP_NUM_THREADS environment variable.
     printf("Computing...");
 
+    // Make sure that this gets printed immediatly rather than
+    // waiting until after the calculations are finished.
+    fflush(stdout);
+
     // NOTE: the limits are divided by 256 as we are incrementing our loop by 1 rather than 256.
     // each loop iteration tests the required 19 values for its 256 value chunk. This means
     // we can use floor division to calculate the limit without missing values.
