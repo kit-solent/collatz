@@ -8,9 +8,9 @@ for count, result in enumerate(results, 1):
     print(f"{str(count).rjust(3)}) {result.start} \t({result.steps})->\t {result.end}")
 
 print("\nThis means that for every chunk of 256 numbers i.e. numbers of the form 256n + k where k ranges from 0 to 255, \
-there are only 19 values that don't fall below their starting value and these values can be precomputed 14 or 15 steps.")
+there are only 19 values that don't fall below their starting value and these values can be precomputed 14 or 15 steps. 19/256 ≈ 7.42%")
 
-
+# 2^16 gives ~3%
 
 
 ##NOTE: Interesting pattern #1
