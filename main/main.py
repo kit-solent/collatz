@@ -3,7 +3,7 @@ import copy, math, pathlib
 
 class Transform():
     """
-    Reperesents a transformation from one `Form` to another.
+    Represents a transformation from one `Form` to another.
     NOTE: This class serves to store transformation information but
     does not validate the data it holds. The is_valid method can be used
     to check if the data is valid.
@@ -62,9 +62,9 @@ class Transform():
 
 class Form():
     """
-    Reperesents all numbers of the linear form an + b
+    Represents all numbers of the linear form an + b
     """
-    # We can't deffine it yet but we can type it.
+    # We can't define it yet but we can type it.
     # BASIS = Form(1, 0)
     BASIS: 'Form'
     # ODD = Form(2, 1)
@@ -331,7 +331,7 @@ class Form():
                 return Transform(self, form, transform, steps, False)
 
             form = step[0]
-            transform = step[1](transform)
+            transform:Form = step[1](transform)
 
             steps += 1
             comp = form < self
@@ -438,5 +438,5 @@ Form.BASIS = Form(1, 0)
 Form.ODD = Form(2, 1)
 Form.EVEN = Form(2, 0)
 
-# some usefull links:
+# some useful links:
 # https://sweet.ua.pt/tos/3x+1.html
